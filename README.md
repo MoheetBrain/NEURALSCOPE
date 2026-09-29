@@ -148,14 +148,21 @@ observed, how a view was derived, and what an intervention changed, and by how m
 
 ## 9. First findings (Qwen2.5-1.5B-Instruct, reproducible)
 
-- On `37 + 58 = 95`, an exhaustive single-head ablation of all 336 heads isolates L22.H10 and L22.H11. Each
-  drops log P("9") by about 8 nats. Ablating L22.H10 changes the output to **`85`**: the sum without the units
-  carry.
-- Activation patching of `37+58` vs `37+48` shows the distinguishing information moving from the operand token
-  to the answer position between L21 and L24. That is the same layers as the critical heads.
-- Qwen2.5-0.5B answers `37 + 58` with `85` unaided.
-- Hypothesis (INFERRED): L22.H10/H11 route the carry. Experiment E1 tests this across controlled problem sets.
-  See [RESEARCH_LOG.md](RESEARCH_LOG.md).
+- **Flagship, CAUSALLY TESTED with n = 1.** On `37 + 58 = 95`, an exhaustive ablation of all 336 heads isolates
+  L22.H10 and L22.H11 (Δ log P("9") ≈ −8 each). Ablating L22.H10 changes the output to **`85`**, which is the sum
+  without the carry. Activation patching (`37+58` vs `37+48`) shows the answer-distinguishing information moving
+  from the operand token to the answer position between L21 and L24.
+- **E1, necessity, CAUSALLY TESTED with n = 80.** Zero-ablating L22.H10+H11 drops tens-digit accuracy on carry
+  problems from 1.00 to 0.05. 38 of 40 outputs become exactly the carry-dropped sum. No-carry problems stay at
+  0.93 tens-digit accuracy. The effect is specific: the other L22 heads and random heads do nothing comparable,
+  and it survives mean-ablation.
+- **E2, sufficiency, CAUSALLY TESTED with n = 40 pairs.** Transplanting only these heads' output at the answer
+  position from a matched carry problem injects a carry in 35 of 40 cases. The reverse transplant removes it in
+  37 of 40. Control heads flip 0 of 40.
+- **DERIVED.** Both heads put about 98% of their attention on the two units digits. The Logit Lens shows the
+  no-carry digit first, at L23–L24, and the carried digit only from L25–L26.
+- **Scope.** One model, one prompt template, 2-digit sums below 100. Full tables, caveats and open questions are
+  in [RESEARCH_LOG.md](RESEARCH_LOG.md). Scripts: `scripts/experiments/carry_heads.py` and `carry_patch.py`.
 
 ## 10. Known scientific limitations
 

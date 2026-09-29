@@ -144,3 +144,65 @@ the output `85`, this suggests (INFERRED) a two-stage computation: tens operands
 late, with L22.H10/H11 supplying information the late correction needs. Caveat: the lens is biased and this is one
 prompt; E1 tests the ablation half across controlled problem sets, and the lens half should be checked across
 carry problems (does P(no-carry digit) peak before P(correct digit) on every carry problem?).
+
+---
+
+## 2026-09-29 — E1: L22.H10/H11 are necessary, specifically, for the units→tens carry
+
+Script `scripts/experiments/carry_heads.py --n 40 --seed 0`; raw data `docs/research/E1_carry_heads.json`.
+Qwen2.5-1.5B-Instruct, 80 prompts `What is A + B? Give only the answer.` (A, B two-digit, A + B < 100;
+40 with a units carry, 40 without; identical token length), readout = tens digit at the answer position.
+Baseline tens-digit accuracy 1.00 / 1.00; full answers 40/40 and 40/40.
+
+**CAUSALLY TESTED (n = 80, one template).** Δ = change in logit(correct tens) − logit(carry-mishandled tens)
+(carry: a_t + b_t; no-carry: a_t + b_t + 1), mean ± SEM.
+
+| zero-ablation | carry: tens acc | carry: → mishandled digit | carry: Δ | no-carry: tens acc | no-carry: Δ |
+|---|---|---|---|---|---|
+| L22.H10 | 0.35 | 0.65 | −17.7 ± 1.8 | 1.00 | −0.5 ± 0.4 |
+| L22.H11 | 0.40 | 0.60 | −17.8 ± 1.5 | 0.95 | −0.9 ± 0.4 |
+| **L22.H10 + H11** | **0.05** | **0.95** | **−27.1 ± 1.0** | 0.93 | −0.9 ± 0.6 |
+| other 10 heads of L22 (mean; worst H8) | 0.98 | – | −0.9 (−4.2) | 0.98 | −0.6 (−2.6) |
+| 10 random heads in other layers (mean; worst L0.H6) | 0.99 | – | −0.4 (−5.1) | 1.00 | −0.6 (−4.3) |
+
+Free-running outputs with H10 + H11 ablated: **38/40 carry problems output exactly the carry-dropped sum**
+(e.g. 37 + 58 → 85); no-carry problems 37/40 fully correct, 0/40 carry-type errors.
+
+**Mean-ablation control** (head output replaced by its dataset-mean at each position): H10 + H11 → carry tens
+accuracy 0.40 (Δ −15.3 ± 1.1) vs no-carry 0.95 (Δ −5.9 ± 0.7). Selectivity survives the off-distribution control.
+Mean-ablation of H10 alone is *not* selective (−4.9 vs −4.7) and makes 10% of no-carry problems *gain* a spurious
+carry — the errors of mean-ablation fall on the carry-mishandled digit in **both** directions, as expected if the
+head's output encodes "carry present" and the dataset mean is a half-carry value (INFERRED).
+
+**DERIVED (attention).** From the answer position, H10 puts 0.58 / 0.40 of its attention on the units digits of
+A / B (carry problems; 0.68 / 0.29 no-carry); H11 0.37 / 0.60. Together ≈ 98% on the two units digits — the only
+tokens that determine whether a carry exists. Weight on tens digits < 0.04.
+
+**DERIVED (Logit Lens).** Carry problems: the carry-mishandled digit dominates the lens (P > 0.5) before the
+correct digit in **34/40** problems (mean P_alt peaks 0.79 at L23; mean P_true 0.77 at L25, 0.97 at L26). No-carry
+problems: 0/40. With H10 + H11 ablated the lens stays on the carry-mishandled digit through the final layer
+(P ≈ 0.95).
+
+## 2026-09-29 — E2: their output at one position is sufficient to inject or remove a carry
+
+Script `scripts/experiments/carry_patch.py --n 40 --seed 0`; raw data `docs/research/E2_carry_patch.json`.
+40 matched pairs sharing tens digits: N (units do not carry) and C (units carry). Only the outputs z of the two
+heads **at the answer position** are transplanted (HeadSetEdit), everything else untouched.
+
+**CAUSALLY TESTED (n = 40 pairs).**
+
+| transplant | tens digit flips | Δ logit(t1+t2+1) − logit(t1+t2), mean ± SEM |
+|---|---|---|
+| z_{L22.H10,H11}(C) → N (inject) | **35/40** to t1 + t2 + 1 | **+23.5 ± 1.3** |
+| z_{L22.H10,H11}(N) → C (remove) | **37/40** to t1 + t2 | **−27.3 ± 1.1** |
+| control z_{L22.H8,H9}, inject | 0/40 | +0.04 ± 0.05 |
+| control z_{L22.H8,H9}, remove | 0/40 | −0.18 ± 0.09 |
+
+**Conclusion (scope: Qwen2.5-1.5B-Instruct, this prompt template, two-digit sums < 100, tens-digit readout).**
+The outputs of attention heads L22.H10 and L22.H11 (one KV group) at the answer position carry a signal that is
+necessary (E1) and sufficient (E2) for adding the units carry into the tens digit; the heads read almost
+exclusively from the units digits; the lens shows the no-carry sum formed first and the carry applied at L25–L26.
+**Not yet shown:** the dimensionality of the signal (is there a single carry direction in the 256-d head
+output?), which downstream components consume it, whether the same heads serve carries into the hundreds digit,
+chained carries (e.g. the 5-digit failure 76150 + 28254 → 104374) or other prompt formats, and why Qwen2.5-0.5B
+fails the carry on 37 + 58.

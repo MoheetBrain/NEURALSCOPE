@@ -60,7 +60,27 @@ condition; mean attention weight of H10/H11 from the answer position to each ope
 the carry-mishandled digit; same-layer and random controls near zero.
 
 *Run.* `.venv/bin/python scripts/experiments/carry_heads.py --n 40` (needs ~7 GB RAM; stop the API server first on
-a 16 GB machine). Results → `docs/research/E1_carry_heads.json` and RESEARCH_LOG.md.
+a 16 GB machine; ≈ 15 min on 4 CPU cores). Results → `docs/research/E1_carry_heads.json` and RESEARCH_LOG.md.
+
+*Result (2026-09-29).* Predictions confirmed: H10+H11 zero-ablation → carry tens accuracy 1.00 → 0.05 (95% to
+the carry-mishandled digit; 38/40 outputs exactly the carry-dropped sum) vs no-carry 0.93; same-layer and random
+controls ≈ 0; selectivity survives mean-ablation.
+
+## Experiment E2 — carry transplant (script: `scripts/experiments/carry_patch.py`)
+
+*Question.* Is the output of L22.H10/H11 at the answer position *sufficient* to inject / remove a carry?
+*Design.* 40 matched pairs with equal tens digits (N: units do not carry; C: units carry). Transplant the two heads'
+`z` at the answer position only (C → N and N → C); control: heads L22.H8/H9.
+*Result (2026-09-29).* Inject 35/40 (Δ +23.5 ± 1.3), remove 37/40 (Δ −27.3 ± 1.1), controls 0/40.
+
+## Next milestone — E3: characterise the carry signal
+
+1. Dimensionality: difference-of-means direction in the 256-d output space of H10/H11; project out / steer along it
+   (does one direction reproduce E1/E2?); linear probe accuracy by layer.
+2. Consumers: which later components (L25–L26 MLPs? heads?) read the signal — path patching from the heads'
+   output to downstream components.
+3. Generality: carries into the hundreds digit, chained carries (5-digit failures such as 76150 + 28254 → 104374),
+   subtraction borrows, other prompt formats, Qwen2.5-0.5B (which fails 37 + 58) and 3B.
 
 ## Reproducibility
 

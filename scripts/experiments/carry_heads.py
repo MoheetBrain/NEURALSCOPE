@@ -71,7 +71,7 @@ def main() -> None:
     args = ap.parse_args()
 
     from neuralscope.config import DEMO_MODEL_ID, Settings
-    from neuralscope.instrumentation import HeadScaleEdit, load_adapter
+    from neuralscope.instrumentation import HeadScaleEdit, HeadSetEdit, load_adapter
 
     s = Settings()
     s.model_id = args.model
@@ -100,6 +100,26 @@ def main() -> None:
     digit_ids = {d: a.encode(str(d))[0] for d in range(10)}
     problems = build_problems(args.n, args.seed)
     t0 = time.time()
+
+    # pass 1: dataset-mean output z of each focus head at every position (all prompts share one token length),
+    # for MEAN-ablation — a control for zero-ablation pushing activations off-distribution
+    zs = {h: [] for h in focus}
+    lengths = set()
+    for p in problems:
+        ids = a.tokenize(f"What is {p['a']} + {p['b']}? Give only the answer.").input_ids
+        lengths.add(len(ids))
+        tr = a.capture(ids, "standard")
+        for h in focus:
+            zs[h].append(tr.head_z[layer, :, h])
+    if len(lengths) != 1:
+        raise SystemExit(f"prompts differ in token length {lengths}; mean-ablation needs aligned positions")
+    mean_z = {h: torch.stack(zs[h]).mean(0) for h in focus}  # [T, d_head]
+    both_key = "L{}.H{}".format(layer, "+".join(map(str, focus)))
+    same_layer_conditions[f"mean-abl {both_key}"] = [HeadSetEdit(layer, h, mean_z[h]) for h in focus]
+    for h in focus:
+        same_layer_conditions[f"mean-abl L{layer}.H{h}"] = [HeadSetEdit(layer, h, mean_z[h])]
+    print(f"  pass 1 (mean head outputs) done ({time.time() - t0:.0f}s)", flush=True)
+
     rows = []
     for i, p in enumerate(problems):
         q = f"What is {p['a']} + {p['b']}? Give only the answer."
@@ -234,8 +254,9 @@ def main() -> None:
     print(f"\nE1 — {info.model_id}{' (DEMO fixture)' if info.is_demo else ''} · {2 * args.n} problems · {report['seconds']}s\n")
     print("| condition | group | tens acc | → alt digit | mean P(true) | Δ logit-diff (± SEM) |")
     print("|---|---|---|---|---|---|")
-    show = ["baseline"] + [f"L{layer}.H{h}" for h in focus] + [both_key]
-    ctrl = [c for c in conds if c.startswith("ctrl")]
+    show = ["baseline"] + [f"L{layer}.H{h}" for h in focus] + [both_key] + \
+        [f"mean-abl L{layer}.H{h}" for h in focus] + [f"mean-abl {both_key}"]
+    ctrl = [c for c in conds if c.startswith("ctrl")]  # zero-ablation of the other heads in the same layer
     rnd = [c for c in conds if c.startswith("rand")]
     for c in show:
         for g in ("carry", "no_carry"):
