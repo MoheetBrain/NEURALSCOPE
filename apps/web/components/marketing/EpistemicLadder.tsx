@@ -57,7 +57,7 @@ export function LabelledViewExample() {
       label="Residual stream"
       right={
         <span className="truncate font-mono text-[10.5px] text-ns-text-faint">
-          <span className="text-ns-text-muted">resid[L14, t7]</span> · illustrative values
+          <span className="text-ns-text-muted">“37 + 58” · answer position</span> · Qwen2.5-1.5B · recorded
         </span>
       }
       padded={false}
@@ -65,15 +65,15 @@ export function LabelledViewExample() {
     >
       <dl className="divide-y divide-ns-border">
         {[
-          { k: "h[L14, t7]", v: "float32[1536]", status: "observed" as const, note: "captured by forward hook" },
-          { k: "Logit Lens top-1", v: "“8”  p=0.14", status: "derived" as const, note: "W_U · norm(h)" },
+          { k: "h[L23, t43]", v: "float32[1536]", status: "observed" as const, note: "captured by forward hook" },
+          { k: "Logit Lens top-1", v: "“8”  p=0.996 → “9” by L26", status: "derived" as const, note: "W_U · norm(h)" },
           {
-            k: "Auto-description",
-            v: "“may track the tens-digit carry”",
+            k: "Hypothesis",
+            v: "“L22.H10 routes the units carry”",
             status: "inferred" as const,
-            note: "LLM-generated · hypothesis",
+            note: "researcher note · untested beyond n=1",
           },
-          { k: "Ablate L17.H5", v: "p(“8”) 0.71 → 0.18", status: "causal" as const, note: "n=1 prompt" },
+          { k: "Ablate L22.H10", v: "p(“9”) 0.9998 → 0.0003 · out 95 → 85", status: "causal" as const, note: "n=1 prompt" },
         ].map((row) => (
           <div key={row.k} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-3 py-2.5 sm:grid-cols-[150px_minmax(0,1fr)_auto]">
             <dt className="font-mono text-[11px] text-ns-text-muted">{row.k}</dt>

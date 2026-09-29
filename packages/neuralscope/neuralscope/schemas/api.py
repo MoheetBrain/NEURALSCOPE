@@ -126,6 +126,8 @@ class BenchmarkIn(BaseModel):
     seed: int = 0
     kinds: list[Literal["add", "sub", "mul", "linear_equation", "compare_fractions", "mod"]] | None = None
     name: str | None = None
+    # explicit, controlled problem set (overrides n/seed/kinds): full MathProblem dicts or {"kind", "operands"}
+    problems: list[dict] | None = Field(default=None, max_length=200)
 
 
 class BenchmarkEvalIn(BaseModel):

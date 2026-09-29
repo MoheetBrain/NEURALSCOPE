@@ -16,6 +16,7 @@ Epistemic statuses (see docs/INTERPRETABILITY.md):
 from __future__ import annotations
 
 import math
+import threading
 import time
 from typing import Any, Callable
 
@@ -81,6 +82,13 @@ class NeuralScopeService:
         self.store = store
         self.settings = settings
         self._lens_target_cache: dict[tuple[str, int], dict[str, torch.Tensor]] = {}
+        self._run_locks: dict[str, threading.Lock] = {}
+        self._run_locks_guard = threading.Lock()
+
+    def _run_lock(self, run_id: str) -> threading.Lock:
+        """Serialises lazy tensor upgrades of one run (concurrent UI requests must not double-write a file)."""
+        with self._run_locks_guard:
+            return self._run_locks.setdefault(run_id, threading.Lock())
 
     # ================================================================== helpers
     @property
@@ -122,11 +130,12 @@ class NeuralScopeService:
 
     def ensure_lens(self, run_id: str) -> dict[str, torch.Tensor]:
         """Logit-lens summaries are computed eagerly for interactive runs and lazily for Math Lab runs."""
-        t = self.store.load_tensors(run_id)
-        if "lens_top_ids" not in t:
-            self.store.add_tensors(run_id, self._lens_tensors(t["resid"]))
+        with self._run_lock(run_id):
             t = self.store.load_tensors(run_id)
-        return t
+            if "lens_top_ids" not in t:
+                self.store.add_tensors(run_id, self._lens_tensors(t["resid"]))
+                t = self.store.load_tensors(run_id)
+            return t
 
     def _trace_tensors(self, trace: Trace, prompt_len: int, with_lens: bool = True) -> dict[str, torch.Tensor]:
         T = trace.seq_len
@@ -287,7 +296,7 @@ class NeuralScopeService:
         P = len(tp.input_ids)
         # integrity check: the teacher-forced capture must reproduce every greedy choice
         consistent = all(int(trace.logits[P - 1 + i].argmax()) == g for i, g in enumerate(gen.generated_ids))
-        tensors = self._trace_tensors(trace, P)
+        tensors = self._trace_tensors(trace, P, with_lens=False)  # lens summaries computed on first view
         target = self.resolve_target(ids, P, target_text, target_token_id, target_position, contrast_text)
         rec = {
             "id": new_id("run"),
@@ -323,6 +332,10 @@ class NeuralScopeService:
 
     def ensure_level(self, run_id: str, level: TraceLevel) -> dict[str, torch.Tensor]:
         """Lazily upgrade a run's stored trace (deterministic re-capture) to at least ``level``."""
+        with self._run_lock(run_id):
+            return self._ensure_level_locked(run_id, level)
+
+    def _ensure_level_locked(self, run_id: str, level: TraceLevel) -> dict[str, torch.Tensor]:
         rec = self._get_run(run_id)
         t = self.store.load_tensors(run_id)
         if LEVEL_ORDER[rec["trace_level"]] >= LEVEL_ORDER[level]:
@@ -660,7 +673,7 @@ class NeuralScopeService:
         # (2) teacher-forced capture on the BASELINE token sequence under the intervention → aligned trace
         level = base["trace_level"]
         trace = self.adapter.capture(ids, level, edits)
-        tensors = self._trace_tensors(trace, P)
+        tensors = self._trace_tensors(trace, P, with_lens=False)
         base_t = self.store.load_tensors(base_run_id)
         comparison = self._intervention_metrics(base, base_t, tensors, trace, gen.generated_ids)
         math_info = None

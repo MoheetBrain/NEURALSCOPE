@@ -97,3 +97,24 @@ def test_full_flow(client):
     upd = client.patch(f"/api/runs/{rid}", json={"notes": "carry?"}).json()
     assert upd["notes"] == "carry?"
     assert client.delete(f"/api/runs/{iv['run']['id']}").status_code == 200
+
+
+def test_math_endpoints(client):
+    v = client.post("/api/math/verify", json={"expression": "73*14", "answer": "1,022"}).json()
+    assert v["correct"] is True and v["oracle_answer"] == "1022"
+    assert client.post("/api/math/verify", json={"expression": "__import__('os')", "answer": "1"}).status_code == 400
+    probs = client.post("/api/math/problems", json={"n": 5, "seed": 1}).json()
+    assert len(probs) == 5 and all("oracle_answer" in p for p in probs)
+    r = client.post("/api/math/run", json={"kind": "add", "operands": {"a": 37, "b": 58}}).json()
+    assert r["math"]["problem"]["oracle_answer"] == "95" and r["kind"] == "math"
+    job = client.post("/api/math/benchmarks", json={"problems": [{"kind": "add", "operands": {"a": 12, "b": 34}},
+                                                                 {"kind": "mul", "operands": {"a": 7, "b": 8}}]}).json()
+    j = _wait(client, job)
+    assert j["status"] == "done" and j["result"]["summary"]["n"] == 2
+    bid = j["result"]["id"]
+    assert client.get(f"/api/math/benchmarks/{bid}").json()["id"] == bid
+    ev = _wait(client, client.post(f"/api/math/benchmarks/{bid}/intervention-eval",
+                                   json={"interventions": [{"type": "head_ablation", "layer": 1, "head": 0}]}).json())
+    assert ev["status"] == "done" and ev["result"]["n"] == 2
+    bad = client.post("/api/math/benchmarks", json={"problems": [{"kind": "add"}]})
+    assert bad.status_code == 400

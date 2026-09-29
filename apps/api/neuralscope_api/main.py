@@ -275,11 +275,19 @@ def create_app(settings: Settings | None = None, adapter: ModelAdapter | None = 
 
     @app.post("/api/math/benchmarks", response_model=JobOut)
     def math_benchmark(body: BenchmarkIn, s: NeuralScopeService = Depends(svc)):
-        from neuralscope.mathlab import default_benchmark, generate_problems
+        from neuralscope.mathlab import MathProblem, default_benchmark, generate_problems, make_problem
 
-        probs = generate_problems(body.n, seed=body.seed, kinds=body.kinds) if body.kinds else \
-            default_benchmark(seed=body.seed, n=body.n)
-        name = body.name or f"Math Lab · {len(probs)} problems · seed {body.seed}"
+        if body.problems:
+            try:
+                probs = [MathProblem.from_dict(p) if "question" in p else make_problem(p["kind"], p["operands"])
+                         for p in body.problems]
+            except (KeyError, TypeError, ValueError) as e:
+                raise HTTPException(400, f"invalid problem: {e}")
+            name = body.name or f"Math Lab · controlled set · {len(probs)} problems"
+        else:
+            probs = generate_problems(body.n, seed=body.seed, kinds=body.kinds) if body.kinds else \
+                default_benchmark(seed=body.seed, n=body.n)
+            name = body.name or f"Math Lab · {len(probs)} problems · seed {body.seed}"
         return state.jobs.submit("benchmark", lambda p: s.run_benchmark(probs, name=name, seed=body.seed, progress=p),
                                  meta={"n": len(probs), "seed": body.seed})
 

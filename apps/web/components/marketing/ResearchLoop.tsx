@@ -25,7 +25,7 @@ export const LOOP: LoopStep[] = [
   },
   {
     verb: "Hypothesise",
-    body: "Propose what a component computes, e.g. “L17.H5 moves carry information to the answer position”.",
+    body: "Propose what a component computes, e.g. “L22.H10 moves carry information to the answer position”.",
     status: "inferred",
     color: "var(--ns-inferred)",
   },

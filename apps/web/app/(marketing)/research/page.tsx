@@ -55,13 +55,13 @@ const EPISTEMOLOGY: Record<EpistemicStatus, { producedBy: string; allowed: strin
   },
   inferred: {
     producedBy: "A researcher or an LLM proposing a meaning for a component or direction.",
-    allowed: "“L17.H5 may carry tens-digit information (hypothesis).”",
+    allowed: "“L22.H10 may carry tens-digit information (hypothesis).”",
     notAllowed: "Presenting the description as a finding, or as ground truth.",
   },
   causal: {
     producedBy: "A rerun with a specified intervention, measured against the clean run and against baselines.",
-    allowed: "“Zero-ablating L17.H5 lowered p(correct) across N controlled problems, more than random heads did.”",
-    notAllowed: "“L17.H5 is the carry circuit.” (Necessity for one metric is not a full mechanism.)",
+    allowed: "“Zero-ablating L22.H10 lowered p(correct) across N controlled problems, more than random heads did.”",
+    notAllowed: "“L22.H10 is the carry circuit.” (Necessity for one metric is not a full mechanism.)",
   },
 };
 
