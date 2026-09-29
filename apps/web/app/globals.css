@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   NeuralScope design system
+   --------------------------------------------------------------------------
+   Identity: scientific instrument x developer tool x neural microscope.
+   Dark, precise, restrained. Hairline (1px) borders, mono for data.
+
+   Raw tokens live on :root as --ns-* so any CSS / inline SVG / canvas code can
+   read them. The @theme block maps them onto Tailwind utilities, e.g.
+     bg-ns-panel  text-ns-text-muted  border-ns-border  text-ns-observed
+     bg-ns-causal/10  font-sans  font-mono
+   Epistemic status colours are CRITICAL: use them only to mean the status.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --ns-bg: #0a0b0d; /* page background */
+  --ns-panel: #101216; /* panels */
+  --ns-panel-2: #15181d; /* raised / hover */
+  --ns-border: #22262d; /* hairlines */
+  --ns-border-strong: #333944;
+
+  /* Ink */
+  --ns-text: #e7e9ec;
+  --ns-text-muted: #8b929c;
+  --ns-text-faint: #5b626c;
+
+  /* Accents & state */
+  --ns-accent: #8fb3ff; /* calibrated blue, brand accent - use sparingly */
+  --ns-accent-2: #d7c9a6; /* warm paper tone for secondary highlights */
+  --ns-danger: #ff7a7a;
+  --ns-warn: #f5c35b;
+  --ns-ok: #5fd3a0;
+
+  /* Epistemic status (see lib/epistemic.ts) */
+  --ns-observed: #7cc7f5; /* direct tensor / model measurement */
+  --ns-derived: #b39dfa; /* mathematical transformation of observed quantities */
+  --ns-inferred: #f2b45a; /* semantic interpretation / hypothesis */
+  --ns-causal: #5fd3a0; /* survived an actual intervention */
+
+  /* Type (next/font injects --font-plex-sans / --font-plex-mono on <html>) */
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Geometry */
+  --ns-radius: 4px;
+  --ns-header-h: 56px;
+}
+
+@theme inline {
+  --color-ns-bg: var(--ns-bg);
+  --color-ns-panel: var(--ns-panel);
+  --color-ns-panel-2: var(--ns-panel-2);
+  --color-ns-border: var(--ns-border);
+  --color-ns-border-strong: var(--ns-border-strong);
+  --color-ns-text: var(--ns-text);
+  --color-ns-text-muted: var(--ns-text-muted);
+  --color-ns-text-faint: var(--ns-text-faint);
+  --color-ns-accent: var(--ns-accent);
+  --color-ns-accent-2: var(--ns-accent-2);
+  --color-ns-danger: var(--ns-danger);
+  --color-ns-warn: var(--ns-warn);
+  --color-ns-ok: var(--ns-ok);
+  --color-ns-observed: var(--ns-observed);
+  --color-ns-derived: var(--ns-derived);
+  --color-ns-inferred: var(--ns-inferred);
+  --color-ns-causal: var(--ns-causal);
+
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-ns: var(--ns-radius);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Base                                                                        */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--ns-border);
+  }
+
+  html {
+    background: var(--ns-bg);
+    scroll-padding-top: calc(var(--ns-header-h) + 16px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--ns-bg);
+    color: var(--ns-text);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern", "liga";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--ns-accent) 32%, transparent);
+    color: var(--ns-text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ns-accent);
+    outline-offset: 2px;
+  }
+
+  /* Thin, quiet scrollbars (instrument panels scroll a lot). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ns-border-strong) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Utilities                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/* Small-caps panel label: mono, uppercase, letter-spaced. */
+@utility ns-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ns-text-muted);
+}
+
+/* Uppercase with instrument tracking (buttons, headlines). */
+@utility ns-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+@utility ns-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Hairline graph-paper background. */
+@utility ns-grid-bg {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ns-border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ns-border) 55%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+}
+
+/* Fine dot grid (denser, quieter). */
+@utility ns-dot-bg {
+  background-image: radial-gradient(color-mix(in srgb, var(--ns-border-strong) 70%, transparent) 1px, transparent 1.2px);
+  background-size: 16px 16px;
+}
+
+/* Diagonal hatch - "unknown", "future", "not yet measured". */
+@utility ns-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ns-border-strong) 55%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion primitives (all disabled by prefers-reduced-motion above)            */
+/* -------------------------------------------------------------------------- */
+
+@keyframes ns-scan {
+  from {
+    top: 0%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes ns-reticle-lock {
+  0% {
+    transform: translate(-50%, -50%) scale(2.4) rotate(-45deg);
+    opacity: 0;
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(0.92) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes ns-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes ns-token {
+  0% {
+    border-color: var(--ns-border);
+    background-color: var(--ns-panel);
+    color: var(--ns-text-faint);
+  }
+  35% {
+    border-color: var(--ns-accent);
+    background-color: color-mix(in srgb, var(--ns-accent) 18%, var(--ns-panel));
+    color: var(--ns-text);
+  }
+  100% {
+    border-color: var(--ns-border-strong);
+    background-color: var(--ns-panel-2);
+    color: var(--ns-text);
+  }
+}
+
+@keyframes ns-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ns-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

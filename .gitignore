@@ -1,0 +1,31 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# NeuralScope local data (metadata DB + tensor files)
+data/*.db
+data/*.db-*
+data/experiments/*
+data/activations/*
+!data/experiments/.gitkeep
+!data/activations/.gitkeep
+
+# Env
+.env
+.env.local
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
