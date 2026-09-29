@@ -27,6 +27,7 @@ from neuralscope.experiments.store import ExperimentStore, new_id, now_iso
 from neuralscope.instrumentation.adapter import (
     Edit,
     HeadScaleEdit,
+    HeadSetEdit,
     MLPScaleEdit,
     ModelAdapter,
     ResidAddEdit,
@@ -223,7 +224,7 @@ class NeuralScopeService:
         """
         keep: list[Edit] = []
         for e in edits:
-            if isinstance(e, (HeadScaleEdit, MLPScaleEdit)):
+            if isinstance(e, (HeadScaleEdit, HeadSetEdit, MLPScaleEdit)):
                 if e.layer >= start_depth:
                     keep.append(e)
             elif e.depth > start_depth:
@@ -402,8 +403,9 @@ class NeuralScopeService:
         "lens_top1_prob": ("Logit Lens top-1 probability", DERIVED, "linear", "sequential"),
         "lens_entropy": ("Logit Lens entropy (nats)", DERIVED, "linear", "sequential_r"),
         "target_prob": ("Logit Lens P(target)", DERIVED, "linear", "sequential"),
-        "target_rank": ("Logit Lens rank of target (log₁₀)", DERIVED, "log", "sequential_r"),
-        "next_token_rank": ("Logit Lens rank of actual next token (log₁₀)", DERIVED, "log", "sequential_r"),
+        # rank metrics are returned as log10(rank) values → linear colour scale over those values
+        "target_rank": ("Logit Lens rank of target (log₁₀)", DERIVED, "linear", "sequential_r"),
+        "next_token_rank": ("Logit Lens rank of actual next token (log₁₀)", DERIVED, "linear", "sequential_r"),
         "resid_norm": ("Residual-stream L2 norm", DERIVED, "log", "sequential"),
         "cos_delta": ("1 − cos(h_d, h_{d−1}) — rotation by each block", DERIVED, "linear", "sequential"),
         "delta_resid": ("‖h_int − h_base‖ / ‖h_base‖ (intervention effect)", CAUSAL, "linear", "sequential"),
@@ -464,6 +466,8 @@ class NeuralScopeService:
         finite = vals[torch.isfinite(vals)]
         return {
             "run_id": run_id, "metric": metric, "label": label, "status": status, "scale": scale, "colormap": cmap,
+            # how `values` relate to the named quantity: rank metrics are sent as log10(rank)
+            "value_transform": "log10" if metric in ("target_rank", "next_token_rank") else "none",
             "depth_labels": self.depth_labels(), "n_depths": D, "n_tokens": T,
             "values": _rl(vals.float(), 4),
             "vmin": _r(finite.min()) if finite.numel() else 0.0, "vmax": _r(finite.max()) if finite.numel() else 1.0,
@@ -664,6 +668,17 @@ class NeuralScopeService:
         if not specs:
             raise ServiceError("no interventions given")
         parsed = self._parse_specs(self._dump_specs(specs))
+        composed_from = None
+        if base.get("interventions"):
+            # Intervening on an intervention run composes: new edits are added to the existing ones and the
+            # result is compared against the ROOT baseline (never against an already-intervened trace).
+            composed_from = base_run_id
+            parsed = self._parse_specs(base["interventions"]) + parsed
+            root_id = base.get("parent_run_id")
+            if not root_id:
+                raise ServiceError(f"intervention run {base_run_id} has no parent baseline")
+            base = self._get_run(root_id)
+            base_run_id = root_id
         ids = base["input_ids"]
         P = base["prompt_len"]
         edits = self.compile(parsed, n_seq=len(ids))
@@ -676,6 +691,7 @@ class NeuralScopeService:
         tensors = self._trace_tensors(trace, P, with_lens=False)
         base_t = self.store.load_tensors(base_run_id)
         comparison = self._intervention_metrics(base, base_t, tensors, trace, gen.generated_ids)
+        comparison["composed_from"] = composed_from
         math_info = None
         correctness = None
         if base.get("math"):
@@ -683,8 +699,9 @@ class NeuralScopeService:
 
             prob = MathProblem.from_dict(base["math"]["problem"])
             v = verify(prob, self.adapter.decode(gen.generated_ids))
-            math_info = {**base["math"], "verification_under_intervention": v.to_dict()}
-            correctness = v.status
+            correctness = "truncated" if gen.stopped_by != "eos" else v.status
+            math_info = {**base["math"], "verification_under_intervention": v.to_dict(),
+                         "label_under_intervention": correctness}
             comparison["correctness_before"] = base.get("correctness")
             comparison["correctness_after"] = v.status
         rec = {
@@ -698,7 +715,8 @@ class NeuralScopeService:
             "free_generated_ids": gen.generated_ids, "free_generated_text": self.adapter.decode(gen.generated_ids),
             "target": base.get("target"), "trace_level": level, "parent_run_id": base_run_id,
             "interventions": [s.model_dump() for s in parsed], "metrics": {"comparison": comparison},
-            "math": math_info, "correctness": correctness, "notes": notes, "tags": [],
+            "tags": ["composed"] if composed_from else [],
+            "math": math_info, "correctness": correctness, "notes": notes,
             "benchmark_id": None, "trace_consistent": None,
         }
         saved = self.store.save_run(rec, tensors)
@@ -998,13 +1016,14 @@ class NeuralScopeService:
             "decision_point": {"position": target_pos, "k": k, "how": how},
             "truncated": truncated, "label": label,
         }
-        rec = self._create_from_generation(tp, gen, trace_level, kind="math", math=math_info,
+        rec = self._create_from_generation(tp, gen, trace_level, kind="math", math=math_info, budget=max_new_tokens,
                                            benchmark_id=benchmark_id, correctness=label,
                                            target=dict(position=target_pos, token_id=target_id,
                                                        contrast_id=contrast_id))
         return rec
 
-    def _create_from_generation(self, tp, gen, level, kind, math, benchmark_id, correctness, target) -> dict:
+    def _create_from_generation(self, tp, gen, level, kind, math, benchmark_id, correctness, target,
+                                budget: int) -> dict:
         ids = tp.input_ids + gen.generated_ids
         trace = self.adapter.capture(ids, level)
         P = len(tp.input_ids)
@@ -1017,7 +1036,8 @@ class NeuralScopeService:
             "id": new_id("run"), "created_at": now_iso(), "kind": kind, "model_id": self.info.model_id,
             "is_demo": self.info.is_demo, "prompt": math["problem"]["question"], "prompt_text": tp.text, "chat": True,
             "system_prompt": None,
-            "generation": {"decoding": "greedy", "max_new_tokens": len(gen.generated_ids), "stopped_by": gen.stopped_by,
+            "generation": {"decoding": "greedy", "max_new_tokens": budget, "n_generated": len(gen.generated_ids),
+                           "stopped_by": gen.stopped_by,
                            "kv_cache": True, "attn_implementation": "eager", "dtype": self.info.dtype},
             "input_ids": ids, "prompt_len": P, "user_span": list(tp.user_span) if tp.user_span else None,
             "generated_ids": gen.generated_ids, "generated_text": self.adapter.decode(gen.generated_ids),
@@ -1088,11 +1108,15 @@ class NeuralScopeService:
             prob = MathProblem.from_dict(run["math"]["problem"])
             P = run["prompt_len"]
             edits = self.compile(parsed, n_seq=None)
-            gen = self.adapter.generate(run["input_ids"][:P], max(8, len(run["generated_ids"]) + 2), edits)
+            # same token budget as the baseline run (older records stored the generated length; floor at 24)
+            budget = max(int(run["generation"].get("max_new_tokens") or 0), 24)
+            gen = self.adapter.generate(run["input_ids"][:P], budget, edits)
             v = verify(prob, self.adapter.decode(gen.generated_ids))
+            status_after = "truncated" if gen.stopped_by != "eos" else v.status  # same rule as the baseline label
             lp = self.answer_logprob(run["input_ids"][:P], prob.oracle_answer, edits)
             rows.append({"problem_id": prob.id, "question": prob.question, "run_id": run["id"],
-                         "correct_before": r["correct"], "correct_after": v.correct, "status_after": v.status,
+                         "status_before": r["status"], "correct_before": r["correct"],
+                         "correct_after": status_after == "correct", "status_after": status_after,
                          "output_after": self.adapter.decode(gen.generated_ids),
                          "oracle_logprob_before": r["oracle_logprob"], "oracle_logprob_after": lp["total"],
                          "delta_oracle_logprob": _r((lp["total"] or 0) - (r["oracle_logprob"] or 0))})

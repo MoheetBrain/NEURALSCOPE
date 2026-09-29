@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from neuralscope.instrumentation import HeadScaleEdit, MLPScaleEdit, ResidAddEdit, ResidSetEdit
+from neuralscope.instrumentation import HeadScaleEdit, HeadSetEdit, MLPScaleEdit, ResidAddEdit, ResidSetEdit
 from tests.conftest import PROMPT
 
 
@@ -179,3 +179,21 @@ def test_generation_under_intervention_matches_capture(demo_adapter):
     tr = demo_adapter.capture(ids + g.generated_ids, "minimal", edits)
     P = len(ids)
     assert [int(tr.logits[P - 1 + i].argmax()) for i in range(len(g.generated_ids))] == g.generated_ids
+
+
+def test_head_set_edit_mean_ablation(demo_adapter):
+    ids = _ids(demo_adapter)
+    base = demo_adapter.capture(ids, "standard")
+    own = demo_adapter.capture(ids, "minimal", [HeadSetEdit(2, 1, base.head_z[2, :, 1])])  # per-position own value
+    assert torch.allclose(own.logits, base.logits, atol=1e-5)
+    zero = demo_adapter.capture(ids, "minimal", [HeadSetEdit(2, 1, torch.zeros(demo_adapter.info.d_head))])
+    zabl = demo_adapter.capture(ids, "minimal", [HeadScaleEdit(2, 1, 0.0)])
+    assert torch.allclose(zero.logits, zabl.logits, atol=1e-6)
+    mean = base.head_z[2, :, 1].mean(0)
+    m = demo_adapter.capture(ids, "standard", [HeadSetEdit(2, 1, mean, positions=[4, 5])])
+    assert torch.allclose(m.head_z[2, 4, 1], mean) and torch.equal(m.head_z[2, 3, 1], base.head_z[2, 3, 1])
+    # generation under a per-position HeadSetEdit uses absolute positions correctly (KV-cached decode steps)
+    g = demo_adapter.generate(ids, 3, [HeadSetEdit(2, 1, torch.zeros(len(ids) + 3, demo_adapter.info.d_head))])
+    tf = demo_adapter.capture(ids + g.generated_ids, "minimal", [HeadScaleEdit(2, 1, 0.0)])
+    P = len(ids)
+    assert [int(tf.logits[P - 1 + i].argmax()) for i in range(len(g.generated_ids))] == g.generated_ids

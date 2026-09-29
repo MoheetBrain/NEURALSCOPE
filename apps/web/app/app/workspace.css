@@ -1,0 +1,79 @@
+/* Research workspace (/app) — small additions on top of the design tokens in globals.css. */
+
+.ns-workspace {
+  font-size: 13px;
+}
+
+/* Indeterminate scanning bar used by <Loading>. */
+.ns-loading-bar {
+  position: relative;
+}
+.ns-loading-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, var(--ns-accent), transparent);
+  animation: ns-ws-scan 1.4s ease-in-out infinite;
+}
+@keyframes ns-ws-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+/* Dim stale views while the next response loads (no layout jump). */
+.ns-stale {
+  opacity: 0.45;
+  transition: opacity 120ms ease;
+}
+
+/* Independent scroll areas with a stable gutter. */
+.ns-scroll {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+/* Number inputs: hide spinners (values are typed / arrowed). */
+.ns-workspace input[type="number"]::-webkit-inner-spin-button,
+.ns-workspace input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ns-workspace input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.ns-workspace select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ns-text-muted) 50%),
+    linear-gradient(135deg, var(--ns-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 10px) 50%,
+    calc(100% - 6px) 50%;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+}
+
+/* Guided-demo highlight on the panel a step points at. */
+.ns-guide-focus {
+  box-shadow:
+    0 0 0 1px var(--ns-accent-2),
+    0 0 0 4px color-mix(in srgb, var(--ns-accent-2) 18%, transparent);
+  transition: box-shadow 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ns-loading-bar::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}

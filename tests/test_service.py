@@ -207,3 +207,23 @@ def test_prompt_limits(service):
         service.create_run("   ")
     with pytest.raises(ServiceError):
         service.create_run("word " * 400)
+
+
+def test_interventions_compose_against_root_baseline(service, run):
+    first = service.run_intervention(run["id"], [HeadAblation(layer=2, head=1)])
+    second = service.run_intervention(first["run"]["id"], [HeadAblation(layer=3, head=0)])
+    child = service.store.get_run(second["run"]["id"])
+    assert child["parent_run_id"] == run["id"]  # lineage points at the root baseline
+    assert [i["layer"] for i in child["interventions"]] == [2, 3]
+    assert second["comparison"]["composed_from"] == first["run"]["id"]
+    # "before" numbers are the root baseline's, identical to the first intervention's "before"
+    assert second["comparison"]["before"] == first["comparison"]["before"]
+    # identical to applying both edits directly to the baseline
+    both = service.run_intervention(run["id"], [HeadAblation(layer=2, head=1), HeadAblation(layer=3, head=0)])
+    assert both["comparison"]["after"] == second["comparison"]["after"]
+
+
+def test_matrix_value_transform(service, run):
+    assert service.matrix(run["id"], "target_rank")["value_transform"] == "log10"
+    m = service.matrix(run["id"], "resid_norm")
+    assert m["value_transform"] == "none" and m["scale"] == "log"

@@ -18,6 +18,7 @@ def test_run_math_problem_records_oracle_label(service):
     lp = m["oracle_answer_logprob"]
     assert lp["tokens"] == ["9", "5"] and lp["total"] <= 0
     assert rec["target"]["source"] == "oracle"
+    assert rec["generation"]["max_new_tokens"] == 4 and rec["generation"]["n_generated"] <= 4
     assert rec["target"]["token"] == "9"
     # lens summaries are lazy for math runs
     assert "lens_top_ids" not in rec["tensor_meta"]["keys"]
@@ -47,6 +48,8 @@ def test_benchmark_and_intervention_eval(service):
     assert len(runs) == 4 and all(r["math"] for r in runs)
     ev = service.benchmark_intervention_eval(bench["id"], [HeadAblation(layer=1, head=0)])
     assert ev["n"] == 4 and ev["status"] == "causal" and len(ev["rows"]) == 4
+    # the random fixture model never emits EOS → every "after" output is labelled truncated, never correct
+    assert all(r["status_after"] == "truncated" and not r["correct_after"] for r in ev["rows"])
     again = service.store.get_benchmark(bench["id"])
     assert again["summary"]["intervention_evals"][0]["id"] == ev["id"]
 

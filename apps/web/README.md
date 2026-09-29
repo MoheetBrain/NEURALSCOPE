@@ -19,10 +19,12 @@ npm run build && npm start
 | --- | --- |
 | `app/globals.css` | Design tokens (`--ns-*`) + Tailwind `@theme` mapping, utilities (`ns-label`, `ns-caps`, `ns-grid-bg`, `ns-hatch`, ...) |
 | `app/(marketing)/` | `/`, `/research`, `/docs` with `SiteHeader` / `SiteFooter` |
-| `app/app/page.tsx` | Placeholder: the workspace replaces it |
+| `app/app/` | Research workspace (`/app`) and Math Lab (`/app/math`); state in `app/app/layout.tsx` |
+| `components/workspace/` | Matrix, inspector tabs (trace, Logit Lens, attention, interventions, diff), Math Lab, charts |
+| `lib/api/` | Typed API client, response types, job polling, view cache |
 | `components/ui/` | Shared primitives: `EpistemicBadge`, `Panel`, `Button`/`ButtonLink`, `Tabs`/`TabPanel`, `Kbd`, `StatusChip` |
 | `components/brand/` | `Logo`/`LogoMark`, `SiteHeader`, `SiteFooter` |
 | `components/marketing/` | Landing sections, `HeroTrace` |
 | `lib/epistemic.ts` | `EPISTEMIC` map (label, colour var, hex, definition, example) |
 | `lib/hero-trace.ts` | Hero snapshot schema + `parseHeroTrace` validation |
-| `public/snapshots/hero-trace.json` | Hero trace data. `"source": "PLACEHOLDER"` until replaced by a recorded trace (`"REAL"`) |
+| `public/snapshots/hero-trace.json` | Hero trace data: a REAL recorded trace from `scripts/export_hero_snapshot.py` (rebuild after regenerating) |

@@ -40,6 +40,19 @@ class HeadScaleEdit:
 
 
 @dataclass
+class HeadSetEdit:
+    """Replace head z (the head's input slice of o_proj) with a given value — mean / resample ablation.
+
+    ``vector`` is [d_head] (same value at every position) or [T, d_head] indexed by absolute position.
+    """
+
+    layer: int
+    head: int
+    vector: torch.Tensor
+    positions: list[int] | None = None
+
+
+@dataclass
 class MLPScaleEdit:
     layer: int
     factor: float = 0.0
@@ -65,7 +78,7 @@ class ResidAddEdit:
     positions: list[int] | None = None
 
 
-Edit = HeadScaleEdit | MLPScaleEdit | ResidSetEdit | ResidAddEdit
+Edit = HeadScaleEdit | HeadSetEdit | MLPScaleEdit | ResidSetEdit | ResidAddEdit
 
 
 # --------------------------------------------------------------------------------------

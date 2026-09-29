@@ -39,6 +39,7 @@ from neuralscope.instrumentation.adapter import (
     Edit,
     GenerationResult,
     HeadScaleEdit,
+    HeadSetEdit,
     MLPScaleEdit,
     ModelAdapter,
     ModelInfo,
@@ -74,12 +75,12 @@ class _Session:
         self.offset = 0  # absolute position of the first token in the current forward call
         self.edit_sets = edit_sets
         self.capture = capture
-        self.head: dict[int, list[tuple[int, HeadScaleEdit]]] = {}
+        self.head: dict[int, list[tuple[int, HeadScaleEdit | HeadSetEdit]]] = {}
         self.mlp: dict[int, list[tuple[int, MLPScaleEdit]]] = {}
         self.resid: dict[int, list[tuple[int, ResidSetEdit | ResidAddEdit]]] = {}
         for b, edits in enumerate(edit_sets):
             for e in edits:
-                if isinstance(e, HeadScaleEdit):
+                if isinstance(e, (HeadScaleEdit, HeadSetEdit)):
                     self.head.setdefault(e.layer, []).append((b, e))
                 elif isinstance(e, MLPScaleEdit):
                     self.mlp.setdefault(e.layer, []).append((b, e))
@@ -270,9 +271,19 @@ class HFDecoderAdapter(ModelAdapter):
                     S = x.shape[1]
                     for b, e in edits:
                         loc = s.local(e.positions, S)
-                        if loc == slice(None) or loc:
-                            x[b, loc, e.head * dh:(e.head + 1) * dh] *= e.factor
-                            s.n_edits_applied += 1
+                        if not (loc == slice(None) or loc):
+                            continue
+                        sl = slice(e.head * dh, (e.head + 1) * dh)
+                        if isinstance(e, HeadSetEdit):
+                            v = e.vector.to(x.device, x.dtype)
+                            if v.dim() == 2:  # per absolute position
+                                idx = (torch.arange(S, device=x.device) + s.offset) if loc == slice(None) else \
+                                    torch.tensor(loc, device=x.device) + s.offset
+                                v = v[idx]
+                            x[b, loc, sl] = v
+                        else:
+                            x[b, loc, sl] *= e.factor
+                        s.n_edits_applied += 1
                 if want_z:
                     B, S, _ = x.shape
                     s.z_cap[layer] = x[0].detach().reshape(S, cfg.n_heads, dh).to("cpu", torch.float32)

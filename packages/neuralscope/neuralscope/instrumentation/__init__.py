@@ -9,6 +9,7 @@ from neuralscope.instrumentation.adapter import (
     Edit,
     GenerationResult,
     HeadScaleEdit,
+    HeadSetEdit,
     MLPScaleEdit,
     ModelAdapter,
     ModelInfo,
@@ -54,6 +55,6 @@ def set_adapter(adapter: ModelAdapter | None) -> None:
 
 
 __all__ = [
-    "Edit", "GenerationResult", "HeadScaleEdit", "MLPScaleEdit", "ModelAdapter", "ModelInfo", "ResidAddEdit",
+    "Edit", "GenerationResult", "HeadScaleEdit", "HeadSetEdit", "MLPScaleEdit", "ModelAdapter", "ModelInfo", "ResidAddEdit",
     "ResidSetEdit", "TokenizedPrompt", "Trace", "TraceLevel", "get_adapter", "load_adapter", "set_adapter",
 ]
