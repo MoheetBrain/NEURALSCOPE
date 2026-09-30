@@ -206,3 +206,34 @@ exclusively from the units digits; the lens shows the no-carry sum formed first 
 output?), which downstream components consume it, whether the same heads serve carries into the hundreds digit,
 chained carries (e.g. the 5-digit failure 76150 + 28254 → 104374) or other prompt formats, and why Qwen2.5-0.5B
 fails the carry on 37 + 58.
+
+---
+
+## 2026-09-30 — Mission pivot: from neural debugger to SelfLab (audit only, no code changed)
+
+**Decision (pending approval).** NeuralScope stops expanding generic interpretability infrastructure and becomes a
+measurement layer for machine self-knowledge ("SelfLab"). Full audit, deletion map and plan:
+`docs/selflab/SELFLAB_AUDIT_AND_PLAN.md`; prior-art report and ≈41k words of labelled notes in `docs/selflab/`.
+
+**Finding (code-verified by a hands-on audit, Qwen2.5-0.5B, CPU).** nnsight 0.7.0 reproduces every primitive of
+NeuralScope's hook layer bit-for-bit at the same speed (336-head batched sweep 7.8 s vs 7.6 s; `.skip()` ≡ our
+resume-from-depth). The hook layer should become a thin adapter. What no library provides: a validated,
+declarative intervention language a model could safely propose, and a harness that scores committed predictions
+against executed interventions and observers.
+
+**Finding (literature, 48+ arXiv IDs verified).** Zero-shot prediction of the effects of *internal* interventions
+before they are executed, scored against an equal-information observer ladder with calibration, is untested.
+The closest works are Li et al. 2511.08579 (trained, four layer blocks, self 64.0 vs other 54.1 EM, untrained 5.02),
+CHIVE 2608.16747 and Zeng 2608.30980 (prompt edits only; no privileged-access advantage), and OWMI 2608.20569
+(post-hoc detection at chance).
+
+**Identification point (DERIVED from the definition).** For a deterministic model with no randomised hidden
+manipulation, the internal state is a function of the visible context, so the Shannon quantity I(Z;R|X) is zero.
+Hence two estimands that must never be conflated: *structural (computational) self-knowledge*, measured as skill
+over declared observer classes (conditional V-information), and *occurrent privileged access*, measured only
+with experimenter-randomised hidden interventions and an exact conditional randomisation test.
+
+**Next experiment (designed, not run).** CSP-1: counterfactual self-prediction with an observer ladder
+(O₀ base rate · O₁ learned outsider · O₂ other family · O₃ same family · O₄ third-person self · O₅ instrumented
+observer). Primary endpoint: log-score skill of the subject's pre-committed Y1 (answer-flip) predictions over the
+best observer; pre-registered SESOI and TOST so that a null is a publishable result.
