@@ -116,3 +116,64 @@ outsiders. These are pilot-scale results, and the held-out confirmation is pre-r
 
 **Next intended step.** Execute the locked held-out run with the command in its lock file, and record its results
 exactly.
+
+---
+
+## 2026-10-17 22:55 (Europe/London) · `selflab/evidence-workbench` · held-out confirmation executed + real recorded example
+
+**Branch.** `selflab/evidence-workbench`, parent `6a23710`. Nothing pushed.
+
+**Project stage.** SelfLab vertical slice verified on the real model. Experiment A's pre-registered held-out run has
+been executed.
+
+**Objective.** Execute the locked held-out confirmation exactly as committed, record its results as they came out
+(including the failed control), and publish one genuine real-model case record on the landing page.
+
+**Files and systems changed.**
+- `docs/selflab/results/expA_heldout_v2_1p5b_F4_s200.json` (new)
+- `docs/selflab/results/exports/slx_574e679faed6_case_export.json` (new)
+- `apps/web/lib/selflab-example.ts`: filled verbatim from that export
+- `apps/web/components/marketing/SelfLabSection.tsx`: the results list no longer squeezes columns; the provenance
+  line wraps, which fixes phone-width overflow
+- `apps/web/__tests__/selflab/landing.test.tsx`
+- landing screenshots
+- RESEARCH_LOG, README, PROJECT_STATUS, `docs/selflab/FINAL_REPORT_2026-10-17.md`
+
+**What was completed.**
+- **Held-out run.** The command from the lock file ran under the model lock. It re-derived the identical plan
+  (`9d5b0ef0…`) and completed 120/120 trials with 0 errors.
+- **Real case.** Re-run at clean commit `6a23710` with identical numbers (the third identical run), exported, and
+  published on the landing page.
+
+**Decisions made and why.**
+- **The failed control stands.** Results are reported exactly under the locked rules, with no re-run or tuning: a
+  failed pre-registered control means the primary hypothesis is untested.
+- **F4 is spent.** Any new held-out run needs a new family and a new lock.
+
+**Tests and verification actually executed.**
+- Held-out run: complete, `EXIT 0`.
+- `cd apps/web && npm run test` → 149 passed. `npm run lint` → exit 0. `npm run typecheck` → exit 0.
+- Playwright landing check: 0 page errors, no horizontal overflow at 390 px (`scrollWidth` 390).
+- `.venv/bin/python -m pytest -m "not slow" -q` → 721 passed, re-run before this commit.
+- The slow suite was not re-run after this step (no Python code changed). Its last run was 8 passed, at `6a23710`.
+
+**Results.**
+
+| Hypothesis | Status | Detail |
+|---|---|---|
+| Manipulation check (pre-registered) | **failed** | doc_v 0.70, doc_alt 0.75, threshold 0.8 |
+| H1, H3, H8 | `control_failed` | untested |
+| H2 (label-order invariance) | `contradicted` | 0.475 [0.39, 0.56] |
+| H4, H5, H6 | `supported` | +11.3 nats; +8.9 nats; 20/20 |
+
+The real case shows answer dependence on the document as supported (n = 1) and claim specificity as contradicted.
+
+**Failures and unresolved uncertainty.**
+- The primary faithfulness question remains untested on held-out data.
+- The descriptive accuracy (0.92) is not interpretable, because the manipulation check failed.
+
+**Effect on the overall project.** The pipeline demonstrably refuses to over-interpret: the positive control caught
+a family where the manipulation does not take. The report-instability finding (H2) replicated on held-out data.
+
+**Next intended step.** Design Experiment A v3 on the discovery split (family calibration, `doc_alt_hint_conflict`,
+per-order metrics). Lock it, then run a new held-out family.

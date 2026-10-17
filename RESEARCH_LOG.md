@@ -333,3 +333,56 @@ E2 data are unchanged.
 read-out of which source changed the answer. The report favours "document" when a document is visible, even when the
 model abstained. This must be confirmed on the locked held-out run (`docs/selflab/prereg/`) before it is stated as a
 finding.
+
+---
+
+## 2026-10-17: Experiment A held-out confirmation (pre-registered v2): the manipulation check failed
+
+**Pre-registration.** `docs/selflab/prereg/expA_heldout_v2_1p5b_F4_s200.lock.json` was committed in `6a23710`
+before any trial ran:
+- spec `cba95e9c…`, plan `9d5b0ef0…`;
+- analysis `source_influence.analysis@2`; rules sha256 `66c4273c…`, H3 text sha256 `66a9bde8…`;
+- Qwen2.5-1.5B-Instruct `989aa798…`, CPU fp32.
+
+The run re-derived the identical plan hash. It covered 120/120 trials over 20 new entities (no overlap with the
+pilot) in held-out family F4 only, with 0 errors and 1 near-tie.
+
+**Outcome under the locked rules (OBSERVED and DERIVED; statuses not capped on this split).**
+- **Pre-registered manipulation check: FAILED.** Both document directions had to reach ≥ 0.8. Results:
+  doc_v → v 0.70 [0.50, 0.90], doc_alt → v_alt 0.75 [0.55, 0.95]. In F4 wording the model answered
+  "insufficient evidence" in 30% / 25% of trials that *contained* the fact.
+- **H1 (primary), H3, H8: `control_failed`.** The confirmatory question is not answered by this run. **Untested**
+  is the correct reading, not supported and not contradicted.
+- **H2, label-order invariance: `contradicted`.** The letter-readout category was the same under a permutation and
+  its reversal in 0.475 [0.39, 0.56] of trials, against a pre-registered > 0.8. The pilot gave 0.675 on F1–F3. So
+  the report's sensitivity to option order replicates on new entities and a new prompt family.
+- **Positive controls held** (H4, H5, H6 `supported`):
+  - document effect on log P(v): +11.3 nats [9.7, 13.1];
+  - suggestion effect on log P(w): +8.9 [7.2, 10.6];
+  - abstention without a document: 20/20.
+- **Behaviour in F4.** A conflicting suggestion made the model abstain in 20/20 doc_v_hint_conflict trials. 14 of
+  these were suggestion-induced, because the no-suggestion partner answered v. For those 14, the letter readout said
+  "insufficient evidence" 12 times and "other or unknown" twice. In the pilot (F1–F3) the 9 such cases were reported
+  as "document". The report changes with the prompt family. Cue-following was 0.0 under conflict and 0.2 without a
+  document.
+- **Descriptive only, because a control failed** (no inference drawn):
+  - letter-readout accuracy 0.92 [0.84, 0.99] on 85 scored trials;
+  - majority label "insufficient_evidence" 0.65, prompt heuristic 0.59;
+  - self minus transcript observer −0.08 [−0.17, −0.01].
+
+  The high accuracy is driven by the many abstention trials, which are easy to label and to report. It is not
+  evidence of faithful source reporting.
+- **Patching (3 items, localized evidence only).** Value-position information hands over to the readout position at
+  depths 23–25. That replicates the pilot's 23–24.
+
+**Interpretation (INFERRED, scoped).** The protocol did its job: the positive control caught a prompt family in which
+the document manipulation does not reliably take. The pre-registered hypotheses about source-report faithfulness are
+therefore untested on held-out data. The one confirmatory statement this run supports is H2: Qwen2.5-1.5B's
+constrained source report is not stable under option reordering. No prompt, family, threshold or rule was changed
+after seeing these results.
+
+**Next protocol (v3, to be locked before running).** Options include:
+- calibrate family wording on the discovery split so the manipulation check can pass, *before* a new held-out
+  family is touched;
+- add the `doc_alt_hint_conflict` condition;
+- report label-order-averaged and per-order accuracy as co-primary.

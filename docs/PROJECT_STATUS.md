@@ -24,8 +24,10 @@ no such probability.
 V1 neural debugger plus the first working SelfLab vertical slice (research prototype). It is verified end to end in
 the browser on the real model. Experiment A (source
 influence vs claimed source) and Experiment B (CSP-1 counterfactual self-prediction on the carry heads) are
-implemented. Both have diagnostic (`debug_pilot`) results on Qwen2.5-1.5B-Instruct. Protocol v2 for Experiment A is
-locked for a held-out confirmation run. Experiment C (blinded state reporting) is protocol-only.
+implemented. Both have diagnostic (`debug_pilot`) results on Qwen2.5-1.5B-Instruct. The pre-registered Experiment A v2
+held-out confirmation was run; its manipulation check failed, so the primary hypothesis is untested, while
+label-order invariance (H2) was contradicted. A real single-case record is on the landing page. Experiment C
+(blinded state reporting) is protocol-only.
 
 ## Current Branch
 
@@ -97,6 +99,8 @@ Only one process holds real model weights at a time (`scripts/model_lock.py`, fc
 - 2026-09-30: SelfLab audit and plan (design only).
 - 2026-10-17:
   - baseline re-verified, and E2 reproduced exactly on CPU;
+  - pre-registered held-out run executed: H1/H3/H8 `control_failed`, H2 contradicted, H4–H6 supported;
+  - real single-case record (`slx_574e679faed6`, clean commit `6a23710`) published on the landing page;
   - SelfLab implemented by six parallel workstreams, integrated by the coordinator;
   - 10 validation defects found and fixed (one high-severity network exposure);
   - Experiment A and CSP-1 diagnostic pilots run;
@@ -151,8 +155,10 @@ All results below were run on 2026-10-17.
 | Check | Command | Result |
 |---|---|---|
 | Fast suite | `.venv/bin/python -m pytest -m "not slow" -q` | 721 passed, 0 failed |
+| Held-out Experiment A v2 (locked plan `9d5b0ef0…`) | command in the lock file | 120/120 trials, 0 errors; plan hash verified; manipulation check failed |
 | Slow suite (real Qwen2.5-0.5B, under lock) | `scripts/model_lock.py -- … pytest -m slow -q` | 8 passed |
-| Web | `npm run test` / `npm run lint` / `npm run typecheck` | 148 passed / clean / clean |
+| Web | `npm run test` / `npm run lint` / `npm run typecheck` | 149 passed / clean / clean |
+| Landing page at phone width (390 px) | Playwright check of `scrollWidth` | no horizontal overflow; 0 page errors |
 | E2 reproduction | `carry_patch.py --n 40 --seed 0`, CPU | identical to the recorded summary |
 | Browser smoke, fixture mode (validation workstream, DEMO API, before the UI fixes) | `scripts/smoke_selflab_browser.cjs` | 10 pass; 2 known defects, later fixed |
 | Browser smoke, REAL mode (Qwen2.5-1.5B, CPU; web 127.0.0.1:3010, API 127.0.0.1:8010) | `WEB=… API=… SMOKE_MAX_TRIALS=6 node scripts/smoke_selflab_browser.cjs` | 12 pass, 0 fail, 0 page errors (`docs/selflab/screenshots/selflab-real-smoke-summary.json`) |
@@ -169,7 +175,9 @@ The pilot numbers are in RESEARCH_LOG.md (2026-10-17) and `docs/selflab/results/
 - **Experiment A v1 approximation.** Document tracking under a conflicting hint borrows the no-hint pair. A
   `doc_alt_hint_conflict` condition is the v2 candidate.
 - **H3 may be untestable.** It needs visible-but-not-causal trials, and Qwen2.5-1.5B always followed the document
-  (0 such trials in the pilot).
+  (0 such trials in the pilot and in the held-out run).
+- **The held-out confirmation is uninformative for H1.** Its manipulation check failed in family F4 (doc_v 0.70,
+  doc_alt 0.75 < 0.8), and F4 is now spent.
 - **CSP-1 comparators.** The different-model observer was not run, and the joint control-head ablation is not a null
   (see RESEARCH_LOG).
 - **Experiment C** is not implemented.
@@ -195,11 +203,13 @@ an NDIF key for larger models.
 
 ## Exact Next Actions
 
-1. Run the locked held-out confirmation of Experiment A (v2, family F4, seed 200, 20 items) with the command in
-   `docs/selflab/prereg/expA_heldout_v2_1p5b_F4_s200.lock.json`. Report it exactly, nulls included.
-2. Fill the landing-page recorded example (`apps/web/lib/selflab-example.ts`) from a real case export made at a clean
-   commit.
-3. Then:
+1. Design Experiment A v3 on the **discovery** split only:
+   - calibrate family wording so the document manipulation passes its check;
+   - add `doc_alt_hint_conflict`;
+   - pre-register per-order and order-averaged accuracy.
+
+   Lock it with `scripts/selflab/lock_spec.py`, then run a **new** held-out family. F4 is now used.
+2. Then:
    - add `doc_alt_hint_conflict` (Experiment A v3);
    - add a different-model observer for CSP-1 (Qwen2.5-0.5B under the lock);
    - implement Experiment C following `protocols/EXP_C_blinded_state.md`.

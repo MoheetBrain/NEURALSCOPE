@@ -129,16 +129,29 @@ function RecordedExample({ ex }: { ex: SelfLabRecordedExample }) {
             </div>
           ) : null}
           {ex.results.length ? (
-            <dl className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 border-t border-ns-border pt-4 font-mono text-[12px]">
-              {ex.results.map((r) => (
-                <div key={r.label} className="contents">
-                  <dt className="text-ns-text-muted">
-                    {r.label}
-                    {r.detail ? <span className="block text-[11px] text-ns-text-faint">{r.detail}</span> : null}
-                  </dt>
-                  <dd className="text-right text-ns-text">{r.value}</dd>
-                </div>
-              ))}
+            <dl className="mt-5 space-y-2 border-t border-ns-border pt-4 font-mono text-[12px]">
+              {ex.results.map((r) => {
+                // Short values (numbers, statuses) sit on the label's row; long ones (model outputs) get their own
+                // full-width line so neither column is squeezed.
+                const long = r.value.length > 28;
+                return (
+                  <div key={r.label} className={long ? "space-y-1" : "flex items-baseline justify-between gap-4"}>
+                    <dt className="min-w-0 text-ns-text-muted">
+                      {r.label}
+                      {r.detail ? <span className="block text-[11px] text-ns-text-faint">{r.detail}</span> : null}
+                    </dt>
+                    <dd
+                      className={
+                        long
+                          ? "whitespace-pre-wrap break-words border-l border-ns-border pl-3 text-ns-text"
+                          : "shrink-0 text-right text-ns-text"
+                      }
+                    >
+                      {r.value}
+                    </dd>
+                  </div>
+                );
+              })}
             </dl>
           ) : null}
         </div>
@@ -168,7 +181,7 @@ function RecordedExample({ ex }: { ex: SelfLabRecordedExample }) {
           ) : null}
         </div>
       </div>
-      <figcaption className="border-t border-ns-border px-5 py-3 font-mono text-[10.5px] text-ns-text-faint">
+      <figcaption className="break-words border-t border-ns-border px-5 py-3 font-mono text-[10.5px] text-ns-text-faint [overflow-wrap:anywhere]">
         experiment {ex.experiment_id} · spec {ex.spec_sha256.slice(0, 12)} · plan {ex.plan_sha256.slice(0, 12)}
         {ex.code_commit ? ` · code ${ex.code_commit.slice(0, 10)}` : ""}
         {ex.export_path ? ` · ${ex.export_path}` : ""}

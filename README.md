@@ -239,6 +239,15 @@ pilots, not definitive research. Statuses on this split are capped at *inconclus
   - The report changed with option order in about a third of trials (consistency 0.675; pre-registered target 0.8).
   - In 9 trials the model abstained because of a conflicting suggestion, yet reported "document" in all 9.
   - Read: no evidence of privileged access to its own source use, and limited faithfulness.
+- **Experiment A, pre-registered held-out confirmation.** v2 rules locked in commit `6a23710` before the run, applied to family F4 and 20 new entities (120 trials, 0 errors).
+  - The pre-registered **manipulation check failed**: the document was followed only 0.70 / 0.75 of the time, because F4 wording triggered abstentions. The primary hypothesis is therefore `control_failed`, i.e. **untested**.
+  - **Label-order invariance was contradicted**: consistency 0.475 [0.39, 0.56] against a pre-registered > 0.8.
+  - The positive controls held.
+  - Full record: [`docs/selflab/results/expA_heldout_v2_1p5b_F4_s200.json`](docs/selflab/results/expA_heldout_v2_1p5b_F4_s200.json).
+- **A real single case** (a recorded run, shown on the landing page):
+  - "This information is based on the description provided in the document."
+  - The answer did depend on the document: supported for n = 1. Removing the document cost −12.1 nats, and replacing it made the answer follow the new value.
+  - The claim is **not specific**: it was re-emitted, and the report said "document", when a suggestion caused the answer. With no document at all, the report still said "document" under one option order.
 - **Experiment B (CSP-1)**: 180 trials, all controls passed. Predictions were committed before execution, and sham
   interventions changed 0/60 answers.
   - Ablating L22.H10+H11 changed 97% of carry answers. That reproduces E1's necessity result on new problems.

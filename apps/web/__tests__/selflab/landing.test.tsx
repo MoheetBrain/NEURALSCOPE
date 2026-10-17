@@ -26,9 +26,18 @@ describe("landing page", () => {
     expect(screen.getAllByRole("link", { name: /open selflab/i }).length).toBeGreaterThan(0);
   });
 
-  it("says the SelfLab pilot record is pending while no recorded example exists", () => {
-    expect(SELFLAB_EXAMPLE).toBeNull();
+  it("shows the committed recorded example from a real (non-demo) run", () => {
+    expect(SELFLAB_EXAMPLE).not.toBeNull();
+    expect(SELFLAB_EXAMPLE?.source).toBe("recorded");
+    expect(SELFLAB_EXAMPLE?.is_demo).toBe(false);
+    expect(SELFLAB_EXAMPLE?.export_path).toMatch(/^docs\/selflab\/results\/exports\/.+\.json$/);
     render(<LandingPage />);
+    expect(screen.queryByTestId("selflab-example-pending")).toBeNull();
+    expect(screen.getAllByText(SELFLAB_EXAMPLE!.experiment_id, { exact: false }).length).toBeGreaterThan(0);
+  });
+
+  it("says the SelfLab pilot record is pending while no recorded example exists", () => {
+    render(<SelfLabExample example={null} />);
     const pending = screen.getByTestId("selflab-example-pending");
     expect(pending).toHaveTextContent(/pilot record pending/i);
     expect(within(pending).getByRole("link", { name: /open selflab/i })).toHaveAttribute("href", "/app/selflab");
