@@ -45,12 +45,31 @@ from neuralscope.instrumentation.adapter import (
     ModelInfo,
     ResidAddEdit,
     ResidSetEdit,
+    TokenizedChat,
     TokenizedPrompt,
     Trace,
     TraceLevel,
 )
 
 SUPPORTED_MODEL_TYPES = {"qwen2", "llama", "mistral"}
+CHAT_ROLES = {"system", "user", "assistant"}
+# Private-use code points: cannot collide with real message text in practice; used to locate content by construction.
+_SENTINEL = "\ue000NS_CONTENT_SENTINEL\ue001"
+
+
+def _validate_messages(messages: list[dict]) -> list[dict[str, str]]:
+    if not isinstance(messages, list) or not messages:
+        raise ValueError("messages must be a non-empty list of {'role', 'content'} dicts")
+    out = []
+    for i, m in enumerate(messages):
+        if not isinstance(m, dict) or "role" not in m or "content" not in m:
+            raise ValueError(f"message {i} must be a dict with 'role' and 'content'")
+        if m["role"] not in CHAT_ROLES:
+            raise ValueError(f"message {i}: unsupported role {m['role']!r} (allowed: {sorted(CHAT_ROLES)})")
+        if not isinstance(m["content"], str):
+            raise ValueError(f"message {i}: content must be a string")
+        out.append({"role": m["role"], "content": m["content"]})  # extra keys (tool_calls, …) are dropped
+    return out
 
 
 def _resolve_device(device: str) -> torch.device:
@@ -92,7 +111,8 @@ class _Session:
         self.attn_cap: dict[int, torch.Tensor] = {}
         self.z_cap: dict[int, torch.Tensor] = {}
         self.mlp_cap: dict[int, torch.Tensor] = {}
-        self.n_edits_applied = 0
+        self.n_edits_applied = 0  # (edit, batch row, forward call) applications that fired
+        self.n_forward_calls = 0
 
     def local(self, positions: list[int] | None, seq_len: int) -> list[int] | slice:
         if positions is None:
@@ -112,6 +132,7 @@ class HFDecoderAdapter(ModelAdapter):
         self.is_demo = is_demo
         self.lock = threading.RLock()
         self.load_seconds: float | None = None
+        self.last_session_stats: dict | None = None
 
     # ------------------------------------------------------------------ loading
     def load(self) -> None:
@@ -217,6 +238,80 @@ class HFDecoderAdapter(ModelAdapter):
                 span = (idx[0], idx[-1] + 1)
         return TokenizedPrompt(text=text, input_ids=ids, user_span=span)
 
+    def _render(self, messages: list[dict], add_generation_prompt: bool) -> str:
+        return self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+
+    def _reject_control_strings(self, msgs: list[dict[str, str]]) -> None:
+        """Message content is data: a special-token string inside it (e.g. ``<|im_end|>``) would be tokenised as a
+        real control token and could forge extra chat turns, so it is refused rather than silently re-tokenised."""
+        specials = {str(t.content) for t in getattr(self.tokenizer, "added_tokens_decoder", {}).values()
+                    if getattr(t, "special", False) and str(t.content)}
+        specials |= {str(s) for s in (self.tokenizer.all_special_tokens or []) if s}
+        for i, m in enumerate(msgs):
+            hit = next((s for s in specials if s in m["content"]), None)
+            if hit is not None:
+                raise ValueError(f"message {i} contains the special-token string {hit!r}; message content is data and "
+                                 "may not contain chat-control tokens")
+
+    def tokenize_messages(self, messages: list[dict], add_generation_prompt: bool = True) -> TokenizedChat:
+        """Render ``messages`` with the chat template, tokenise the exact string, and locate each content span.
+
+        Location is by construction where possible: message i is re-rendered with its content replaced by a
+        sentinel; the sentinel's offset is where the content starts (everything before it is identical) and the
+        real text is verified to hold the content verbatim there. If the template transforms content (so the check
+        fails) we fall back to an ordered verbatim search from the end of the previous message's match. Content
+        that cannot be found verbatim gets span None (reported, never guessed).
+        """
+        tok = self.tokenizer
+        if not getattr(tok, "chat_template", None):
+            raise ValueError(f"tokenizer of {self.model_id} has no chat template; use tokenize(prompt, chat=False)")
+        msgs = _validate_messages(messages)
+        self._reject_control_strings(msgs)
+        text = self._render(msgs, add_generation_prompt)
+        enc = tok(text, add_special_tokens=False, return_offsets_mapping=True)
+        ids = list(enc["input_ids"])
+        offsets = [(int(a), int(b)) for a, b in enc["offset_mapping"]]
+        char_spans: list[tuple[int, int] | None] = []
+        cursor = 0
+        for i, m in enumerate(msgs):
+            c = m["content"]
+            if not c:
+                char_spans.append(None)
+                continue
+            start = -1
+            try:
+                probe = [dict(x) for x in msgs]
+                probe[i]["content"] = _SENTINEL
+                k = self._render(probe, add_generation_prompt).find(_SENTINEL)
+                if k >= cursor and text[k:k + len(c)] == c:
+                    start = k
+            except Exception:  # template rejected the probe → fall back to search
+                start = -1
+            if start < 0:
+                start = text.find(c, cursor)
+            if start < 0:
+                char_spans.append(None)
+                continue
+            char_spans.append((start, start + len(c)))
+            cursor = start + len(c)
+        tok_spans: list[tuple[int, int] | None] = []
+        exact: list[bool | None] = []
+        for cs in char_spans:
+            if cs is None:
+                tok_spans.append(None)
+                exact.append(None)
+                continue
+            a, b = cs
+            idx = [j for j, (x, y) in enumerate(offsets) if y > a and x < b and y > x]
+            if not idx:
+                tok_spans.append(None)
+                exact.append(None)
+                continue
+            tok_spans.append((idx[0], idx[-1] + 1))
+            exact.append(offsets[idx[0]][0] == a and offsets[idx[-1]][1] == b)
+        return TokenizedChat(text=text, input_ids=ids, message_token_spans=tok_spans, message_char_spans=char_spans,
+                             offsets=offsets, span_exact=exact, add_generation_prompt=add_generation_prompt)
+
     def encode(self, text: str) -> list[int]:
         return list(self.tokenizer(text, add_special_tokens=False)["input_ids"])
 
@@ -309,7 +404,11 @@ class HFDecoderAdapter(ModelAdapter):
                 return out if edits else None
             return hook
 
+        def count_forward(module, args, kwargs=None):
+            s.n_forward_calls += 1
+
         try:
+            handles.append(self.model.model.register_forward_pre_hook(count_forward))
             if capture is not None or 0 in s.resid:
                 handles.append(self._embed.register_forward_hook(resid_hook(0)))
             for l, layer in enumerate(self._layers):
@@ -325,6 +424,8 @@ class HFDecoderAdapter(ModelAdapter):
         finally:
             for h in handles:
                 h.remove()
+            self.last_session_stats = {"n_edits_applied": s.n_edits_applied, "n_forward_calls": s.n_forward_calls,
+                                       "n_rows": len(edit_sets), "n_edits": sum(len(es) for es in edit_sets)}
 
     @staticmethod
     def _apply_resid_edits(s: _Session, depth: int, h: torch.Tensor) -> torch.Tensor:
@@ -365,10 +466,15 @@ class HFDecoderAdapter(ModelAdapter):
             past = out.past_key_values
             logits = out.logits[0, -1]
             gen: list[int] = []
+            gen_lp: list[float] = []
+            gen_margin: list[float] = []
             stopped = "max_new_tokens"
             for _ in range(max_new_tokens):
                 nxt = int(torch.argmax(logits))
                 gen.append(nxt)
+                gen_lp.append(float(torch.log_softmax(logits.float(), dim=-1)[nxt]))
+                top2 = torch.topk(logits.float(), 2).values
+                gen_margin.append(float(top2[0] - top2[1]))
                 if nxt in self.eos_ids:
                     stopped = "eos"
                     break
@@ -378,7 +484,9 @@ class HFDecoderAdapter(ModelAdapter):
                 out = self.model(input_ids=self._ids([nxt]), past_key_values=past, use_cache=True)
                 past = out.past_key_values
                 logits = out.logits[0, -1]
-        return GenerationResult(prompt_ids=list(input_ids), generated_ids=gen, stopped_by=stopped)  # type: ignore[arg-type]
+        return GenerationResult(prompt_ids=list(input_ids), generated_ids=gen, stopped_by=stopped,  # type: ignore[arg-type]
+                                n_edits_applied=s.n_edits_applied, generated_logprobs=gen_lp,
+                                generated_margins=gen_margin)
 
     @torch.no_grad()
     def capture(self, input_ids: list[int], level: TraceLevel = "standard", edits: list[Edit] | None = None) -> Trace:
@@ -400,22 +508,39 @@ class HFDecoderAdapter(ModelAdapter):
             trace.mlp_out = torch.stack([s.mlp_cap[l] for l in range(n)])
         return trace
 
+    def _check_logit_positions(self, positions: list[int], T: int) -> list[int]:
+        pos = [int(p) for p in positions]
+        if not pos or any(not 0 <= p < T for p in pos):
+            raise ValueError(f"logit positions {pos} must be non-empty and inside a sequence of length {T}")
+        return pos
+
     @torch.no_grad()
     def final_logits_batch(self, input_ids: list[int], edit_sets: list[list[Edit]], start_depth: int = 0,
-                           resid_in: torch.Tensor | None = None) -> torch.Tensor:
+                           resid_in: torch.Tensor | None = None,
+                           logit_positions: list[int] | None = None) -> torch.Tensor:
         """Logits [B, T, V] for B copies of ``input_ids``, copy b under ``edit_sets[b]``.
 
         With ``start_depth > 0`` the forward pass resumes from ``resid_in`` [T, d] — the residual stream
         entering block ``start_depth`` (depth index ``start_depth``) — skipping blocks that cannot be
         affected by edits at or after that depth. Residual edits at ``start_depth`` are applied to
         ``resid_in``. Mathematically identical to the full pass (verified in tests).
+
+        ``logit_positions``: unembed only these positions and return [B, len(logit_positions), V] (memory: a
+        full [B, T, V] float32 tensor is ~0.6 MB per token for a 152k vocabulary).
         """
         B = len(edit_sets)
         if start_depth == 0:
+            if logit_positions is None:
+                with self.lock, self._session(edit_sets, capture=None) as s:
+                    s.offset = 0
+                    out = self.model(input_ids=self._ids(input_ids, batch=B), use_cache=False)
+                return out.logits.detach().to("cpu", torch.float32)
+            pos = self._check_logit_positions(logit_positions, len(input_ids))
             with self.lock, self._session(edit_sets, capture=None) as s:
                 s.offset = 0
-                out = self.model(input_ids=self._ids(input_ids, batch=B), use_cache=False)
-            return out.logits.detach().to("cpu", torch.float32)
+                hs = self.model.model(input_ids=self._ids(input_ids, batch=B), use_cache=False).last_hidden_state
+                logits = self._lm_head(hs[:, pos])  # last_hidden_state is already final-normed
+            return logits.detach().to("cpu", torch.float32)
         if resid_in is None:
             raise ValueError("start_depth > 0 requires resid_in")
         for es in edit_sets:
@@ -424,8 +549,10 @@ class HFDecoderAdapter(ModelAdapter):
                 if first < start_depth:
                     raise ValueError(f"edit {e} acts before start_depth={start_depth} (those blocks are not re-run)")
         T = resid_in.shape[0]
+        pos = None if logit_positions is None else self._check_logit_positions(logit_positions, T)
         with self.lock, self._session(edit_sets, capture=None) as s:
             s.offset = 0
+            s.n_forward_calls += 1  # resumed pass: the base model's forward (and its counting hook) is bypassed
             h = resid_in.to(self.device, self.dtype)[None].expand(B, -1, -1).contiguous()
             h = self._apply_resid_edits(s, start_depth, h)
             pos_ids = torch.arange(T, device=self.device)[None].expand(B, -1)
@@ -436,8 +563,37 @@ class HFDecoderAdapter(ModelAdapter):
                 out = self._layers[l](h, attention_mask=mask, position_ids=pos_ids, past_key_values=None,
                                       use_cache=False, position_embeddings=pos_emb)
                 h = out[0] if isinstance(out, tuple) else out
-            logits = self._lm_head(self._norm(h))
+            logits = self._lm_head(self._norm(h if pos is None else h[:, pos]))
         return logits.detach().to("cpu", torch.float32)
+
+    @torch.no_grad()
+    def sequence_logits(self, sequences: list[list[int]], positions: list[list[int]],
+                        edits: list[Edit] | None = None) -> list[torch.Tensor]:
+        """Teacher-forced logits of B different sequences in ONE right-padded batch, all under ``edits``.
+
+        Right padding is exact for causal attention: a real token at position t only attends to positions <= t, so
+        pad tokens (appended after each sequence) never influence the requested logits, and absolute positions —
+        hence position-restricted edits — are identical to an unbatched run. Edits with ``positions=None`` also
+        fire on pad positions, which is harmless for the same reason; per-position ``HeadSetEdit`` vectors must
+        cover the longest sequence. Returns float32 CPU tensors [len(positions[b]), V].
+        """
+        if len(sequences) != len(positions):
+            raise ValueError("sequences and positions must have the same length")
+        if not sequences:
+            return []
+        lens = [len(x) for x in sequences]
+        if min(lens) == 0:
+            raise ValueError("empty sequence")
+        pos = [self._check_logit_positions(p, n) for p, n in zip(positions, lens)]
+        T = max(lens)
+        pad = int(self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else sequences[0][-1])
+        batch = torch.tensor([list(x) + [pad] * (T - len(x)) for x in sequences], dtype=torch.long, device=self.device)
+        with self.lock, self._session([list(edits or []) for _ in sequences], capture=None) as s:
+            s.offset = 0
+            hs = self.model.model(input_ids=batch, use_cache=False).last_hidden_state
+            rows = torch.cat([hs[b, p] for b, p in enumerate(pos)])
+            logits = self._lm_head(rows).detach().to("cpu", torch.float32)
+        return list(torch.split(logits, [len(p) for p in pos]))
 
     # ------------------------------------------------------------------ readout geometry
     @torch.no_grad()

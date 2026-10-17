@@ -237,3 +237,99 @@ with experimenter-randomised hidden interventions and an exact conditional rando
 (O₀ base rate · O₁ learned outsider · O₂ other family · O₃ same family · O₄ third-person self · O₅ instrumented
 observer). Primary endpoint: log-score skill of the subject's pre-committed Y1 (answer-flip) predictions over the
 best observer; pre-registered SESOI and TOST so that a null is a publishable result.
+
+---
+
+## 2026-10-17: SelfLab evidence workbench, baseline re-verification and diagnostic pilots
+
+**Environment.** Apple M5 Max, 48 GB RAM, MPS available. Python 3.11.15, torch 2.14.1, transformers 5.20.1.
+Snapshots: Qwen2.5-1.5B-Instruct `989aa798…`, Qwen2.5-0.5B-Instruct `7ae55760…`. CPU fp32 is the reference device.
+
+**Baseline reproduced today (OBSERVED).** On branch `claude/zen-knuth-hhtjxh` at `9a4e13e`:
+- fast suite: 300 passed;
+- slow suite (real Qwen2.5-0.5B): 5 passed;
+- web: 83 passed; lint and typecheck clean.
+
+E2 was re-run on CPU fp32 (`scripts/experiments/carry_patch.py --n 40 --seed 0`, output to
+`data/repro/E2_repro_cpu.json`). It matches the recorded `docs/research/E2_carry_patch.json` summary to every
+reported decimal: inject 0.875, remove 0.925, controls 0/40, Δ +23.478 / −27.284. E1 was not re-run.
+
+**Decision: the deletion map was not executed.** SelfLab is built *above* the existing debugger. The debugger, Math
+Lab, website and E1/E2 assets are all kept. No NNsight migration: there is no current blocker, and the CPU/MPS parity
+notes are in `docs/selflab/INSTRUMENTATION_NOTES.md`.
+
+**Finding (OBSERVED, instrumentation).** On Qwen2.5-1.5B fp32, MPS and CPU logits agree to about 1e-3 with identical
+argmax on fixed inputs. Even so, MPS flipped 1 of 32 turn-1 greedy answers at a near-tie (top-1 minus top-2 margin
+4.6e-5). Confirmatory runs therefore use CPU only and never mix devices.
+
+**Experiment A diagnostic pilot (CAUSALLY TESTED counterfactual design; `debug_pilot`, statuses capped at
+inconclusive).**
+- Run `expA_pilot_1p5b_debug_s0_2026-10-17_v2`, plan `023bf7ef…`: 20 invented entities × 6 conditions, families
+  F1–F3, 120 trials, 0 errors. An independent second run was bit-identical.
+- Controls:
+  - document delivered 80/80;
+  - the document is followed: doc_v → v 20/20 and doc_alt → v_alt 20/20;
+  - Δ log P(v) between doc_v and doc_alt +14.6 nats [13.4, 15.7];
+  - letter-option mass ≈ 1.0.
+- The model abstained in 20/20 no-document trials and followed the user's suggestion only 0.05 of the time.
+- **Self-report vs counterfactual source (v1 rules).** Letter readout 0.64 [0.54, 0.74], 20 clusters.
+  - vs majority label: +0.14 [0.05, 0.22];
+  - vs prompt-only heuristic: −0.07 [−0.16, 0.01];
+  - vs transcript observer: −0.36 [−0.46, −0.26].
+  - Label-order consistency was 0.675 (pre-registered target 0.8). "A" was chosen in 42% of readouts.
+  - The advantage over the majority predictor vanishes when F1 is left out (+0.055 [−0.048, 0.143]).
+- **The model misattributes its own abstentions.** In 9 trials it abstained because of a conflicting suggestion
+  (its no-suggestion partner answered the document value). The letter readout said "document" 9/9 and the free text
+  18/18.
+- **Patching (DERIVED, 3 items, localized evidence only).** Information from the document value position reaches the
+  readout position at depths 23–24.
+
+**Design correction (protocol v2, decided before any held-out data).** Independent validation found three design
+problems:
+- H3 (self beats transcript observer) could never be supported under the v1 labels;
+- H1's comparator was too weak;
+- the manipulation check only tested doc_v.
+
+v2, `source_influence.analysis@2`:
+- scores visible-but-not-causal trials as `other_or_unknown`;
+- separates `hint_induced_abstention`;
+- compares H1 against the better of the majority label and the prompt heuristic;
+- requires both document directions in the manipulation check.
+
+The post-hoc v2 re-analysis of the debug pilot is descriptive only:
+- accuracy 0.71 [0.61, 0.80] vs prompt heuristic 0.78, difference −0.08 [−0.17, 0.01];
+- 0 visible-not-causal trials, so H3 was not testable on this model.
+
+**Experiment B / CSP-1 diagnostic pilot (`debug_pilot`, capped).**
+- Run `csp1_pilot_1p5b_debug_s0_2026-10-17`: 180 trials, 0 errors.
+- Every prediction was committed (hash and time) before its intervention executed, and all 1080 prediction passes
+  were edit-free. Sham changed 0/60 answers.
+- Zero-ablating L22.H10+H11 changed the first answer token in 0.967 of new carry problems (carry mishandled 29/30)
+  and 0.0 of no-carry problems. **This reproduces E1's necessity result on held-out problems.**
+- The target's committed predictions averaged P(change) = 0.049. Held-out log scores:
+
+  | Predictor | Log score (bits) |
+  |---|---|
+  | Subject | −1.391 |
+  | Outsider fitted on other problems' outcomes (O*) | −0.413 |
+  | Base rate | −0.796 |
+  | Third-person framing | −0.930 |
+  | Transcript-only | −1.627 |
+
+  Subject minus O* was −0.98 bits [−1.38, −0.58]. A different-model observer was not run, and is reported as
+  unavailable rather than replaced.
+
+**Discrepancy, documented rather than rewritten.** In CSP-1, *jointly* zero-ablating the same-layer "control" heads
+L22.H8+H9 is not a null intervention:
+- the full answer changed in 0.43 (carry) and 0.60 (no-carry) of problems, mostly the units digit, e.g. 41 → 43;
+- the first token (tens digit) changed in 0.17 and 0.13.
+
+E1 measured control heads one at a time, at the tens-digit readout only: L22.H8 alone gave tens accuracy 0.925 /
+0.90, and L22.H9 1.0 / 1.0. E1's statement that control heads "do nothing comparable" is therefore scoped to
+single-head ablation at the carry/tens readout. It does not extend to joint ablation or to the units digit. E1 and
+E2 data are unchanged.
+
+**INFERRED (hypothesis only).** At 1.5B the constrained source report behaves more like a context-based guess than a
+read-out of which source changed the answer. The report favours "document" when a document is visible, even when the
+model abstained. This must be confirmed on the locked held-out run (`docs/selflab/prereg/`) before it is stated as a
+finding.

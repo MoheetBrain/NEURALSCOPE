@@ -15,6 +15,7 @@ from neuralscope.instrumentation.adapter import (
     ModelInfo,
     ResidAddEdit,
     ResidSetEdit,
+    TokenizedChat,
     TokenizedPrompt,
     Trace,
     TraceLevel,
@@ -56,5 +57,5 @@ def set_adapter(adapter: ModelAdapter | None) -> None:
 
 __all__ = [
     "Edit", "GenerationResult", "HeadScaleEdit", "HeadSetEdit", "MLPScaleEdit", "ModelAdapter", "ModelInfo", "ResidAddEdit",
-    "ResidSetEdit", "TokenizedPrompt", "Trace", "TraceLevel", "get_adapter", "load_adapter", "set_adapter",
+    "ResidSetEdit", "TokenizedChat", "TokenizedPrompt", "Trace", "TraceLevel", "get_adapter", "load_adapter", "set_adapter",
 ]

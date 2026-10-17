@@ -32,6 +32,7 @@ from neuralscope.instrumentation.adapter import (
     ModelAdapter,
     ResidAddEdit,
     ResidSetEdit,
+    TokenizedPrompt,
     Trace,
     TraceLevel,
 )
@@ -56,6 +57,9 @@ OBSERVED, DERIVED, INFERRED, CAUSAL = "observed", "derived", "inferred", "causal
 LEVEL_ORDER = {"minimal": 0, "standard": 1, "full": 2}
 LENS_K = 10
 FINAL_K = 20
+# Hard ceiling for a per-call ``max_prompt_tokens`` override (attention storage grows with T²; the global default
+# stays ``Settings.max_prompt_tokens``).
+MAX_PROMPT_TOKENS_HARD_CAP = 1024
 
 Progress = Callable[[float, str], None]
 
@@ -271,21 +275,71 @@ class NeuralScopeService:
         }
 
     # ================================================================== runs
-    def create_run(self, prompt: str, chat: bool = True, system_prompt: str | None = None,
+    @staticmethod
+    def _validate_messages(messages: list[dict]) -> list[dict[str, str]]:
+        if not isinstance(messages, list) or not messages:
+            raise ServiceError("messages must be a non-empty list of {role, content}")
+        out = []
+        for i, m in enumerate(messages):
+            if not isinstance(m, dict) or not isinstance(m.get("content"), str) or \
+                    m.get("role") not in ("system", "user", "assistant"):
+                raise ServiceError(f"message {i} must be {{role: system|user|assistant, content: str}}")
+            if m["role"] == "system" and i != 0:
+                raise ServiceError("a system message is only allowed as the first message")
+            out.append({"role": m["role"], "content": m["content"]})
+        if out[-1]["role"] != "user":
+            raise ServiceError("the last message must be a user message (the run generates the assistant reply)")
+        return out
+
+    def _prompt_token_limit(self, override: int | None) -> int:
+        if override is None:
+            return self.settings.max_prompt_tokens
+        v = int(override)
+        if not 1 <= v <= MAX_PROMPT_TOKENS_HARD_CAP:
+            raise ServiceError(f"max_prompt_tokens must be within 1..{MAX_PROMPT_TOKENS_HARD_CAP}")
+        return v
+
+    def create_run(self, prompt: str | None = None, chat: bool = True, system_prompt: str | None = None,
                    max_new_tokens: int = 16, trace_level: TraceLevel | None = None,
                    target_text: str | None = None, target_token_id: int | None = None,
                    target_position: int | None = None, contrast_text: str | None = None,
                    notes: str | None = None, kind: str = "baseline", math: dict | None = None,
-                   benchmark_id: str | None = None, tags: list[str] | None = None) -> dict:
+                   benchmark_id: str | None = None, tags: list[str] | None = None,
+                   messages: list[dict] | None = None, max_prompt_tokens: int | None = None) -> dict:
+        """Generate (greedy, KV-cached) and capture one run.
+
+        ``messages`` (optional): a full chat — tokenised with ``tokenize_messages``; ``prompt`` becomes the last user
+        message's content (display only), ``user_span`` that message's token span, ``chat=True``, and the messages
+        are persisted on the run. ``max_prompt_tokens`` (optional) overrides the global prompt-length limit for this
+        call, bounded by ``MAX_PROMPT_TOKENS_HARD_CAP``.
+        """
+        limit = self._prompt_token_limit(max_prompt_tokens)
+        msgs = None
+        if messages is not None:
+            if system_prompt is not None:
+                raise ServiceError("with messages, pass the system prompt as the first (system) message")
+            msgs = self._validate_messages(messages)
+            last_user = max(i for i, m in enumerate(msgs) if m["role"] == "user")
+            prompt = msgs[last_user]["content"]
+            chat = True
+            system_prompt = msgs[0]["content"] if msgs[0]["role"] == "system" else None
         if not prompt or not prompt.strip():
             raise ServiceError("prompt is empty")
         level = trace_level or self.settings.trace_level
         if level not in LEVEL_ORDER:
             raise ServiceError(f"unknown trace level {level}")
         max_new_tokens = max(1, min(int(max_new_tokens), self.settings.max_new_tokens_cap))
-        tp = self.adapter.tokenize(prompt, chat=chat, system_prompt=system_prompt)
-        if len(tp.input_ids) > self.settings.max_prompt_tokens:
-            raise ServiceError(f"prompt is {len(tp.input_ids)} tokens; V1 limit is {self.settings.max_prompt_tokens} "
+        if msgs is not None:
+            try:
+                tc = self.adapter.tokenize_messages(msgs, add_generation_prompt=True)
+            except (ValueError, NotImplementedError) as e:
+                raise ServiceError(f"cannot tokenise messages: {e}") from e
+            span = tc.message_token_spans[last_user]
+            tp = TokenizedPrompt(text=tc.text, input_ids=tc.input_ids, user_span=span)
+        else:
+            tp = self.adapter.tokenize(prompt, chat=chat, system_prompt=system_prompt)
+        if len(tp.input_ids) > limit:
+            raise ServiceError(f"prompt is {len(tp.input_ids)} tokens; V1 limit is {limit} "
                                "(activation storage grows with T² for attention)")
         t0 = time.time()
         gen = self.adapter.generate(tp.input_ids, max_new_tokens)
@@ -329,6 +383,8 @@ class NeuralScopeService:
             "benchmark_id": benchmark_id,
             "trace_consistent": consistent,
         }
+        if msgs is not None:
+            rec["messages"] = msgs
         return self.store.save_run(rec, tensors)
 
     def ensure_level(self, run_id: str, level: TraceLevel) -> dict[str, torch.Tensor]:
@@ -719,6 +775,8 @@ class NeuralScopeService:
             "math": math_info, "correctness": correctness, "notes": notes,
             "benchmark_id": None, "trace_consistent": None,
         }
+        if base.get("messages") is not None:
+            rec["messages"] = base["messages"]
         saved = self.store.save_run(rec, tensors)
         return {"run": self.run_summary(saved), "comparison": comparison}
 

@@ -19,11 +19,11 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "NeuralScope — Debugger for learned intelligence",
+    default: "NeuralScope — Inspect the model. Audit its claims.",
     template: "%s · NeuralScope",
   },
   description:
-    "NeuralScope is a causal debugger for neural networks: inspect, intervene on, and causally test the computations neural networks learn.",
+    "NeuralScope is an experimental workbench for tracing AI responses, testing self-reports, and comparing explanations against measured evidence.",
   applicationName: "NeuralScope",
 };
 

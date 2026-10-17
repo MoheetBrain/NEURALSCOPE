@@ -21,6 +21,7 @@ from neuralscope.experiments.jobs import JobManager
 from neuralscope.experiments.service import NeuralScopeService, ServiceError
 from neuralscope.experiments.store import ExperimentStore
 from neuralscope.instrumentation import ModelAdapter, load_adapter
+from neuralscope_api.selflab_routes import build_selflab_router
 from neuralscope.schemas.api import (
     BenchmarkEvalIn,
     BenchmarkIn,
@@ -85,6 +86,7 @@ def create_app(settings: Settings | None = None, adapter: ModelAdapter | None = 
     app = FastAPI(title="NeuralScope API", version="0.1.0", lifespan=lifespan,
                   description="Causal debugger for learned intelligence — V1 neural debugger + Math Lab.")
     app.state.ns = state
+    app.include_router(build_selflab_router(state))  # SelfLab: /api/selflab/* (selflab_routes.py)
     app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
                        allow_methods=["*"], allow_headers=["*"])
 

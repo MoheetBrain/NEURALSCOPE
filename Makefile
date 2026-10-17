@@ -1,4 +1,4 @@
-.PHONY: setup dev demo api web test test-fast test-slow test-web lint build clean-data acceptance experiment-e1
+.PHONY: setup dev demo api web test test-fast test-slow test-web lint build clean-data acceptance experiment-e1 selflab-test selflab-pilot selflab-smoke
 
 setup:        ## install Python + web deps and download model weights
 	./scripts/setup.sh
@@ -40,3 +40,14 @@ acceptance:   ## V1 acceptance flow over HTTP against a running API (real model)
 
 experiment-e1:  ## Experiment E1 (carry heads) in-process; stop the API first on 16 GB machines
 	.venv/bin/python scripts/experiments/carry_heads.py --n 40
+
+selflab-test:  ## SelfLab fast tests (fixture model; no weights loaded)
+	.venv/bin/python -m pytest -q tests/test_selflab_*.py tests/test_instrumentation_selflab.py
+
+selflab-pilot: ## Experiment A diagnostic pilot (Qwen2.5-1.5B, CPU fp32, 20 items) under the model lock
+	.venv/bin/python scripts/model_lock.py -- .venv/bin/python scripts/selflab/run_pilot.py \
+		--template source_influence_battery --model Qwen/Qwen2.5-1.5B-Instruct --device cpu --dtype float32 \
+		--n-items 20 --split debug_pilot --seed 0
+
+selflab-smoke: ## browser acceptance of /app/selflab against running web+API (WEB=… API=… OUT_DIR=…)
+	node scripts/smoke_selflab_browser.cjs

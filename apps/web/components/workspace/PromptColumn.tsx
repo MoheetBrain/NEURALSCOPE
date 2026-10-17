@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
+import Link from "next/link";
 import { Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Kbd } from "@/components/ui/Kbd";
@@ -17,11 +18,59 @@ import { TokenStrip } from "./TokenStrip";
 import { FLAGSHIP_PROMPT, useWorkspace } from "./WorkspaceProvider";
 import { ErrorBox, Field, Loading, NumberInput, SelectInput, StatusBadge, Switch, TextInput } from "./ui";
 
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+/** Messages stored on a multi-message run (SelfLab chat / replay runs), or null for a single-prompt run. */
+export function runMessages(run: RunDetail | null | undefined): ChatMessage[] | null {
+  const m = (run as (RunDetail & { messages?: unknown }) | null | undefined)?.messages;
+  if (!Array.isArray(m) || m.length === 0) return null;
+  const ok = m.filter(
+    (x): x is ChatMessage => typeof x === "object" && x !== null && typeof (x as ChatMessage).role === "string" && typeof (x as ChatMessage).content === "string",
+  );
+  return ok.length ? ok : null;
+}
+
+/** Read-only view of the conversation a multi-message run was given (the prompt box cannot express it). */
+export function RunConversation({ run }: { run: RunDetail }) {
+  const msgs = runMessages(run);
+  if (!msgs) return null;
+  return (
+    <Panel
+      label={`Run context · ${msgs.length} msg${msgs.length === 1 ? "" : "s"}`}
+      status="observed"
+      statusNote="input"
+      className="shrink-0"
+      bodyClassName="flex flex-col gap-1.5 p-2.5"
+      data-testid="run-conversation"
+    >
+      <p className="text-[10.5px] leading-snug text-ns-accent-2">
+        {String(run.kind).startsWith("selflab") ? "SelfLab chat run" : "Chat run"} — multi-message context; edit in{" "}
+        <Link href="/app/selflab" className="underline hover:text-ns-text">
+          SelfLab
+        </Link>
+        . Read-only here.
+      </p>
+      {msgs.map((m, i) => (
+        <div key={i} className="rounded-[3px] border border-ns-border bg-ns-bg px-2 py-1">
+          <div className="ns-label text-[9px]">
+            #{i} · {m.role}
+          </div>
+          <div className="max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-ns-text-muted">{m.content}</div>
+        </div>
+      ))}
+    </Panel>
+  );
+}
+
 export function PromptColumn() {
   const { run } = useWorkspace();
   return (
     <div className="ns-scroll flex min-h-0 flex-col gap-2 p-2 pr-1">
       <GuidedDemo />
+      {run.data ? <RunConversation run={run.data} /> : null}
       <PromptForm />
       {run.error && !run.data ? <ErrorBox error={run.error} onRetry={run.reload} /> : null}
       {run.data ? <RunOutput run={run.data} stale={run.stale} /> : run.loading ? <Loading label="Loading run" /> : null}
@@ -33,8 +82,10 @@ export function PromptColumn() {
 }
 
 function PromptForm() {
-  const { state, update, submitRun, pending, model } = useWorkspace();
+  const { state, update, submitRun, pending, model, run } = useWorkspace();
   const running = pending?.kind === "run";
+  // A multi-message run cannot be re-run from this single-prompt box: say so instead of implying it.
+  const multi = runMessages(run.data) !== null;
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
@@ -42,7 +93,12 @@ function PromptForm() {
     }
   };
   return (
-    <Panel label="Prompt" status="observed" statusNote="input" className="shrink-0" bodyClassName="flex flex-col gap-2 p-2.5">
+    <Panel label={multi ? "New run prompt" : "Prompt"} status="observed" statusNote="input" className="shrink-0" bodyClassName="flex flex-col gap-2 p-2.5">
+      {multi ? (
+        <p className="text-[10.5px] leading-snug text-ns-text-faint" data-testid="new-run-note">
+          RUN starts a new single-prompt run. It does not replay the conversation shown above.
+        </p>
+      ) : null}
       <textarea
         aria-label="Prompt"
         value={state.prompt}

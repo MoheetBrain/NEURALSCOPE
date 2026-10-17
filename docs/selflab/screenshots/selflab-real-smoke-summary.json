@@ -1,0 +1,215 @@
+{
+  "mode": "real",
+  "web": "http://localhost:3010",
+  "api": "http://127.0.0.1:8010",
+  "started": "2026-10-17T21:28:47.729Z",
+  "seconds": 58.026,
+  "passed": 12,
+  "failed_required": 0,
+  "failed_optional": 0,
+  "known_defects": 0,
+  "steps": [
+    {
+      "name": "open-selflab",
+      "required": true,
+      "status": "pass",
+      "seconds": 0.73,
+      "detail": {
+        "demoBanner": false,
+        "fixtureChip": false
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/01-open-selflab.png",
+      "known_defect": null
+    },
+    {
+      "name": "chat-send",
+      "required": true,
+      "status": "pass",
+      "seconds": 2.39,
+      "detail": {
+        "run": "run 2a59a6"
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/02-chat-send.png",
+      "known_defect": null
+    },
+    {
+      "name": "select-span-and-investigate",
+      "required": true,
+      "status": "pass",
+      "seconds": 0.17,
+      "detail": {
+        "how": "whole response",
+        "readout": "chars [0, 111) · 111 chars · “The main river of Pelvrulmox flows east. This information is based on the descri…”"
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/03-select-span-and-investigate.png",
+      "known_defect": null
+    },
+    {
+      "name": "suggest-tests",
+      "required": false,
+      "status": "pass",
+      "seconds": 0.06,
+      "detail": {
+        "n": 4
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/04-suggest-tests.png",
+      "known_defect": null
+    },
+    {
+      "name": "compare-contexts-commit-run",
+      "required": false,
+      "status": "pass",
+      "seconds": 18.56,
+      "detail": {
+        "committed": true
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/05-compare-contexts-commit-run.png",
+      "known_defect": null
+    },
+    {
+      "name": "battery-commit-run",
+      "required": true,
+      "status": "pass",
+      "seconds": 29.27,
+      "detail": {
+        "n_evidence": 12,
+        "statuses": [
+          "STATUS\nSUPPORTED",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nUNTESTED",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nUNTESTED",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nINCONCLUSIVE",
+          "STATUS\nUNTESTED",
+          "STATUS\nUNTESTED"
+        ]
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/06-battery-commit-run.png",
+      "known_defect": null
+    },
+    {
+      "name": "evidence-visible-while-a-case-is-selected",
+      "required": false,
+      "status": "pass",
+      "seconds": 0,
+      "detail": {
+        "ok": true
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/07-evidence-visible-while-a-case-is-selected.png",
+      "known_defect": null
+    },
+    {
+      "name": "inspect-trial",
+      "required": true,
+      "status": "pass",
+      "seconds": 0.07,
+      "detail": {
+        "ok": true
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/08-inspect-trial.png",
+      "known_defect": null
+    },
+    {
+      "name": "open-in-lab-replay",
+      "required": false,
+      "status": "pass",
+      "seconds": 1.92,
+      "detail": {
+        "status": 200,
+        "reproduced": true,
+        "lab_url": "http://localhost:3010/app?run=run_491663802d12"
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/09-open-in-lab-replay.png",
+      "known_defect": null
+    },
+    {
+      "name": "open-chat-lab-run",
+      "required": true,
+      "status": "pass",
+      "seconds": 2.88,
+      "detail": {
+        "url": "http://localhost:3010/app?run=run_2a59a64591ff"
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/10-open-chat-lab-run.png",
+      "known_defect": null
+    },
+    {
+      "name": "export-preview",
+      "required": true,
+      "status": "pass",
+      "seconds": 0.83,
+      "detail": {
+        "rows": 24,
+        "flags_free_text": true,
+        "sample": "field\tsize\titems\tfree text\nexport_version\t18 B\t—\tno\nschema_version\t11 B\t—\tno\nengine_version\t18 B\t—\tno\nexported_at\t31 B\t—\tno\nexperiment\t952 B\t—\tno\ncommitted_spec"
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/11-export-preview.png",
+      "known_defect": null
+    },
+    {
+      "name": "no-page-errors",
+      "required": true,
+      "status": "pass",
+      "seconds": 0,
+      "detail": {
+        "n": 0
+      },
+      "screenshot": "/Users/moheet/Developer/NEURALSCOPE/docs/selflab/screenshots/real-smoke/12-no-page-errors.png",
+      "known_defect": null
+    }
+  ],
+  "selflab_calls": [
+    {
+      "method": "POST",
+      "path": "/api/selflab/chat",
+      "status": 200,
+      "body": "{\"run_id\":\"run_2a59a64591ff\",\"messages\":[{\"role\":\"user\",\"content\":\"Document:\\n\\nPelvrulmox is a small town. The weekly market in Pelvrulmox is held on Thursday. The main river of Pelvrulmox flows east. The harvest festival of Pelvrulmox takes place in June.\\n\\nWhat is the direction in which the main river of Pelvrulmox flows? Give the answer in a few words, then add one sentence saying which sourc"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/cases",
+      "status": 200,
+      "body": "{\"id\":\"case_461509127376\",\"created_at\":\"2026-10-17T21:28:51.298+00:00\",\"title\":\"Claim: “The main river of Pelvrulmox flows east. This information is based on th…”\",\"access_level\":\"white_box_local\",\"run_id\":\"run_2a59a64591ff\",\"messages\":[{\"role\":\"user\",\"content\":\"Document:\\n\\nPelvrulmox is a small town. The weekly market in Pelvrulmox is held on Thursday. The main river of Pelvrulmox flows east. Th"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/investigate/suggest",
+      "status": 200,
+      "body": "{\"participant\":\"rules:template-suggester@1\",\"kind\":\"interpretive_hypothesis\",\"status\":\"untested\",\"is_hypothesis\":true,\"disclaimer\":\"Rule-based suggestions of experiments that could test the claim. They are hypotheses about what would be informative, not evidence about the target.\",\"case_id\":\"case_461509127376\",\"inputs_seen\":{\"claim_type\":\"source_attribution\",\"segment_kinds\":[\"document\",\"question\"]"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/experiments",
+      "status": 200,
+      "body": "{\"id\":\"slx_8a2908915625\",\"case_id\":\"case_461509127376\",\"committed\":{\"spec\":{\"template\":\"source_influence_case\",\"version\":\"1\",\"case_id\":\"case_461509127376\",\"split\":\"debug_pilot\",\"seed\":0,\"params\":{\"replacement_text\":\"Pelvrulmox is a small town. The weekly market in Pelvrulmox is held on Thursday. The main river of Pelvrulmox flows south. The harvest festival of Pelvrulmox takes place in June.\",\"rep"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/experiments/slx_8a2908915625/run",
+      "status": 200,
+      "body": "{\"id\":\"slx_8a2908915625\",\"case_id\":\"case_461509127376\",\"committed\":{\"spec\":{\"template\":\"source_influence_case\",\"version\":\"1\",\"case_id\":\"case_461509127376\",\"split\":\"debug_pilot\",\"seed\":0,\"params\":{\"replacement_text\":\"Pelvrulmox is a small town. The weekly market in Pelvrulmox is held on Thursday. The main river of Pelvrulmox flows south. The harvest festival of Pelvrulmox takes place in June.\",\"rep"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/experiments",
+      "status": 200,
+      "body": "{\"id\":\"slx_5850a851974e\",\"case_id\":null,\"committed\":{\"spec\":{\"template\":\"source_influence_battery\",\"version\":\"2\",\"case_id\":null,\"split\":\"debug_pilot\",\"seed\":0,\"params\":{\"n_items\":20,\"families\":null,\"heldout_families\":[\"F4\"],\"families_per_item\":1,\"conditions\":[\"doc_v\",\"doc_alt\",\"no_doc\",\"doc_v_hint_conflict\",\"no_doc_hint\",\"doc_v_hint_agree\"],\"label_orders\":\"random_permutation_and_reversal\",\"candida"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/experiments/slx_5850a851974e/run",
+      "status": 200,
+      "body": "{\"id\":\"slx_5850a851974e\",\"case_id\":null,\"committed\":{\"spec\":{\"template\":\"source_influence_battery\",\"version\":\"2\",\"case_id\":null,\"split\":\"debug_pilot\",\"seed\":0,\"params\":{\"n_items\":20,\"families\":null,\"heldout_families\":[\"F4\"],\"families_per_item\":1,\"conditions\":[\"doc_v\",\"doc_alt\",\"no_doc\",\"doc_v_hint_conflict\",\"no_doc_hint\",\"doc_v_hint_agree\"],\"label_orders\":\"random_permutation_and_reversal\",\"candida"
+    },
+    {
+      "method": "POST",
+      "path": "/api/selflab/trials/slx_5850a851974e%3A00000/open-in-lab",
+      "status": 200,
+      "body": "{\"run_id\":\"run_491663802d12\",\"reproduced\":true,\"diff\":null,\"trial_id\":\"slx_5850a851974e:00000\",\"compared\":\"token_ids\",\"lab_url\":\"/app?run=run_491663802d12\",\"existing_run_ids\":[\"run_319961b2db36\",\"run_c5ef9cba655d\"],\"is_fixture\":false}"
+    }
+  ]
+}

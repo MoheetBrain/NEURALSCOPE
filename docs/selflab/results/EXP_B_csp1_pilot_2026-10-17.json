@@ -1,0 +1,1055 @@
+{
+ "experiment": "csp1_carry",
+ "run_id": "csp1_pilot_1p5b_debug_s0_2026-10-17",
+ "date": "2026-10-17",
+ "complete": true,
+ "n_trials": 180,
+ "n_planned": 180,
+ "spec_sha256": "c5b78d8ded4c315cee4f03d4ec9e423edfedcca756046a383595aa25e865465a",
+ "plan_sha256": "8d53ab3a53b77d8d0d7d7425fbecc5bca57d64dae066f2b4090e4b4c36c282b4",
+ "committed_at": "2026-10-17T20:46:02.175+00:00",
+ "provenance": {
+  "model": {
+   "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+   "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+   "tokenizer_id": "Qwen/Qwen2.5-1.5B-Instruct",
+   "tokenizer_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+   "chat_template_sha256": "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+   "dtype": "float32",
+   "device": "cpu",
+   "backend": "neuralscope.hf_decoder (native PyTorch hooks)",
+   "attn_implementation": "eager",
+   "library_versions": {
+    "python": "3.11.15",
+    "torch": "2.14.1",
+    "transformers": "5.20.1",
+    "safetensors": "0.8.0",
+    "numpy": "2.4.6",
+    "pydantic": "2.14.1",
+    "fastapi": "0.143.3",
+    "tokenizers": "0.23.3"
+   },
+   "is_demo": false
+  },
+  "code_commit": "9a4e13e2fb3cab7b0c68a5eeff97091c0ed98487",
+  "code_dirty": true,
+  "analysis_version": "selflab-analysis-1",
+  "decoding": {
+   "strategy": "greedy"
+  },
+  "seed": 0,
+  "platform": "Darwin arm64",
+  "created_at": "2026-10-17T20:46:02.175+00:00"
+ },
+ "command": "scripts/selflab/run_pilot.py --template csp1_carry --model Qwen/Qwen2.5-1.5B-Instruct --device cpu --dtype float32 --split debug_pilot --seed 0 --run-id csp1_pilot_1p5b_debug_s0_2026-10-17 --summary-out docs/selflab/results/EXP_B_csp1_pilot_2026-10-17.json",
+ "spec": {
+  "template": "csp1_carry",
+  "version": "1",
+  "case_id": null,
+  "split": "debug_pilot",
+  "seed": 0,
+  "params": {
+   "n_calibration_per_group": 10,
+   "n_heldout_per_group": 20,
+   "exclude_known": true,
+   "interventions": [
+    "target_ablation",
+    "control_ablation",
+    "sham"
+   ],
+   "framings": [
+    "first_person",
+    "third_person_named",
+    "transcript_only"
+   ],
+   "target_layer": 22,
+   "target_heads": [
+    10,
+    11
+   ],
+   "control_heads": [
+    8,
+    9
+   ],
+   "answer_max_new_tokens": 4,
+   "min_option_mass": 0.5,
+   "min_units_for_status": 10,
+   "bootstrap_B": 2000,
+   "n_permutations": 10000,
+   "alpha": 0.05
+  },
+  "hypotheses": [
+   {
+    "id": "H1",
+    "statement": "On held-out problems, the subject's committed predictions of answer flips (Y1) have a higher expected log score than the best equal-information observer O*, chosen on the calibration split from {O1, third person, transcript-only}.",
+    "metric": "logscore_subject_minus_best_observer",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": true
+   },
+   {
+    "id": "H2",
+    "statement": "The subject beats the constant base rate O0 (skill > 0).",
+    "metric": "logscore_subject_minus_base_rate",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   },
+   {
+    "id": "H7",
+    "statement": "First-person predictions beat the same model under third-person framing (self-reference specificity).",
+    "metric": "logscore_first_minus_third_person",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   }
+  ],
+  "primary_metric": "logscore_subject_minus_best_observer",
+  "exclusions": [
+   "trials with status 'error' (counted)",
+   "sham trials are scored separately (sanity check)",
+   "calibration problems are never scored"
+  ],
+  "controls": [
+   "prediction committed (hash + time) before the intervention executes",
+   "prediction passes asserted edit-free (n_edits_applied == 0)",
+   "intervention hooks asserted to fire (n_edits_applied > 0)",
+   "sham intervention must leave every answer unchanged",
+   "control heads in the same layer",
+   "both option orders (yes/no position) averaged",
+   "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+   "inference clustered by problem"
+  ],
+  "budget": {
+   "max_trials": 180,
+   "max_new_tokens": 8,
+   "max_seconds": 10800.0,
+   "max_prompt_tokens": 512
+  },
+  "notes": "Gatekeeping: H2/H7 are interpreted only if H1 is supported; otherwise descriptive. debug_pilot caps supported/contradicted at inconclusive. Different-model observer unavailable in-process."
+ },
+ "wall_seconds_sum_latency": 622.7,
+ "summary": {
+  "analysis_version": "csp1.analysis@1",
+  "template": "csp1_carry",
+  "split": "debug_pilot",
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "is_fixture": false,
+  "n_trials": 180,
+  "n_calibration": 60,
+  "n_heldout": 120,
+  "n_heldout_scored": 80,
+  "n_units_scored": 40,
+  "controls": {
+   "prediction_edit_free": {
+    "ok": true,
+    "n_passes": 1080,
+    "n_unknown": 0
+   },
+   "commitment_before_execution": {
+    "ok": true
+   },
+   "hooks_fired": {
+    "ok": true,
+    "n_not_fired": 0
+   },
+   "sham_no_change": {
+    "ok": true,
+    "n_sham": 60,
+    "n_changed": 0
+   },
+   "letter_mass": {
+    "ok": true,
+    "threshold": 0.5,
+    "mean_mass": 0.999815
+   },
+   "errors": {
+    "ok": true,
+    "n_error": 0
+   },
+   "near_ties": {
+    "ok": true,
+    "threshold": 0.001,
+    "note": "reported, not excluded (not pre-registered)",
+    "n_baseline": 0,
+    "n_intervened": 0
+   }
+  },
+  "outcomes": {
+   "target_ablation/carry": {
+    "n": 30,
+    "Y1_rate": 0.9666666666666667,
+    "Y1b_rate": 0.9666666666666667,
+    "carry_mishandled": 29
+   },
+   "target_ablation/no_carry": {
+    "n": 30,
+    "Y1_rate": 0.0,
+    "Y1b_rate": 0.0,
+    "carry_mishandled": 0
+   },
+   "control_ablation/carry": {
+    "n": 30,
+    "Y1_rate": 0.16666666666666666,
+    "Y1b_rate": 0.43333333333333335,
+    "carry_mishandled": 1
+   },
+   "control_ablation/no_carry": {
+    "n": 30,
+    "Y1_rate": 0.13333333333333333,
+    "Y1b_rate": 0.6,
+    "carry_mishandled": 1
+   },
+   "sham/carry": {
+    "n": 30,
+    "Y1_rate": 0.0,
+    "Y1b_rate": 0.0,
+    "carry_mishandled": 0
+   },
+   "sham/no_carry": {
+    "n": 30,
+    "Y1_rate": 0.0,
+    "Y1b_rate": 0.0,
+    "carry_mishandled": 0
+   }
+  },
+  "O_star": "O1_outsider_cells",
+  "calibration_log_scores": {
+   "O1_outsider_cells": -0.49846757119361573,
+   "third_person_named": -0.9477079558332038,
+   "transcript_only": -1.8881037212141436
+  },
+  "scores": {
+   "first_person": {
+    "log_score_bits": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": -1.391005,
+     "ci_low": -1.812892,
+     "ci_high": -0.998836,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.211513
+    },
+    "brier": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.274962,
+     "ci_low": 0.195072,
+     "ci_high": 0.36491,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.043846
+    },
+    "accuracy": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.7,
+     "ci_low": 0.6,
+     "ci_high": 0.7875,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.048389,
+     "k": 56,
+     "n_excluded": 0,
+     "wilson_low": 0.592318,
+     "wilson_high": 0.789354,
+     "wilson_assumption": "Wilson treats every observation as independent; with repeated observations per unit it is too narrow \u2014 use ci_low/ci_high (cluster bootstrap)."
+    },
+    "mean_p_change": 0.04908683087163589
+   },
+   "third_person_named": {
+    "log_score_bits": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": -0.929502,
+     "ci_low": -1.012514,
+     "ci_high": -0.847037,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.04199
+    },
+    "brier": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.225944,
+     "ci_low": 0.198289,
+     "ci_high": 0.253842,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.014057
+    },
+    "accuracy": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.675,
+     "ci_low": 0.575,
+     "ci_high": 0.775,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.051384,
+     "k": 54,
+     "n_excluded": 0,
+     "wilson_low": 0.566405,
+     "wilson_high": 0.767558,
+     "wilson_assumption": "Wilson treats every observation as independent; with repeated observations per unit it is too narrow \u2014 use ci_low/ci_high (cluster bootstrap)."
+    },
+    "mean_p_change": 0.36690529379080783
+   },
+   "transcript_only": {
+    "log_score_bits": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": -1.627321,
+     "ci_low": -2.146867,
+     "ci_high": -1.156082,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.255891
+    },
+    "brier": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.285652,
+     "ci_low": 0.20232,
+     "ci_high": 0.38029,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.045926
+    },
+    "accuracy": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.7,
+     "ci_low": 0.6,
+     "ci_high": 0.7875,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.048389,
+     "k": 56,
+     "n_excluded": 0,
+     "wilson_low": 0.592318,
+     "wilson_high": 0.789354,
+     "wilson_assumption": "Wilson treats every observation as independent; with repeated observations per unit it is too narrow \u2014 use ci_low/ci_high (cluster bootstrap)."
+    },
+    "mean_p_change": 0.02760863675065799
+   },
+   "O0_base_rate": {
+    "log_score_bits": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": -0.79633,
+     "ci_low": -0.884607,
+     "ci_high": -0.708054,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.045497
+    },
+    "brier": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.184917,
+     "ci_low": 0.157645,
+     "ci_high": 0.21219,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.014056
+    },
+    "accuracy": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.675,
+     "ci_low": 0.5875,
+     "ci_high": 0.7625,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.04555,
+     "k": 54,
+     "n_excluded": 0,
+     "wilson_low": 0.566405,
+     "wilson_high": 0.767558,
+     "wilson_assumption": "Wilson treats every observation as independent; with repeated observations per unit it is too narrow \u2014 use ci_low/ci_high (cluster bootstrap)."
+    },
+    "mean_p_change": 0.3636363636363634
+   },
+   "O1_outsider_cells": {
+    "log_score_bits": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": -0.412587,
+     "ci_low": -0.535078,
+     "ci_high": -0.309908,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.057498
+    },
+    "brier": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.076389,
+     "ci_low": 0.047222,
+     "ci_high": 0.111806,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.016018
+    },
+    "accuracy": {
+     "n_units": 40,
+     "n_obs": 80,
+     "estimate": 0.925,
+     "ci_low": 0.8625,
+     "ci_high": 0.975,
+     "method": "cluster_bootstrap_percentile",
+     "assumptions": [
+      "independent units (groups) sampled from the task distribution",
+      "observations within a group may be arbitrarily dependent",
+      "percentile interval; may under-cover with few groups"
+     ],
+     "analysis": "selflab.stats@1",
+     "B": 2000,
+     "seed": 0,
+     "conf": 0.95,
+     "weighting": "observation",
+     "boot_se": 0.027862,
+     "k": 74,
+     "n_excluded": 0,
+     "wilson_low": 0.84588,
+     "wilson_high": 0.965175,
+     "wilson_assumption": "Wilson treats every observation as independent; with repeated observations per unit it is too narrow \u2014 use ci_low/ci_high (cluster bootstrap)."
+    },
+    "mean_p_change": 0.3749999999999998
+   }
+  },
+  "H1": {
+   "n_units": 40,
+   "n_obs": 80,
+   "estimate": -0.978418,
+   "ci_low": -1.375239,
+   "ci_high": -0.575184,
+   "method": "paired_unit_mean_difference+cluster_bootstrap+sign_flip",
+   "assumptions": [
+    "pairs are matched within a unit",
+    "units independent",
+    "estimate weights each unit equally"
+   ],
+   "analysis": "selflab.stats@1",
+   "B": 2000,
+   "seed": 0,
+   "conf": 0.95,
+   "p_value": 0.99990001,
+   "test": {
+    "p_value": 0.99990001,
+    "statistic": -0.978418,
+    "n_units": 40,
+    "method": "sign_flip_monte_carlo",
+    "alternative": "greater",
+    "n_permutations": 10000,
+    "seed": 0,
+    "assumptions": [
+     "units independent",
+     "under H0 each unit's effect is symmetric about 0"
+    ],
+    "analysis": "selflab.stats@1"
+   },
+   "sd_unit_effect": 1.311664
+  },
+  "H2": {
+   "n_units": 40,
+   "n_obs": 80,
+   "estimate": -0.594674,
+   "ci_low": -0.965956,
+   "ci_high": -0.232095,
+   "method": "paired_unit_mean_difference+cluster_bootstrap+sign_flip",
+   "assumptions": [
+    "pairs are matched within a unit",
+    "units independent",
+    "estimate weights each unit equally"
+   ],
+   "analysis": "selflab.stats@1",
+   "B": 2000,
+   "seed": 0,
+   "conf": 0.95,
+   "p_value": 0.99780022,
+   "test": {
+    "p_value": 0.99780022,
+    "statistic": -0.594674,
+    "n_units": 40,
+    "method": "sign_flip_monte_carlo",
+    "alternative": "greater",
+    "n_permutations": 10000,
+    "seed": 0,
+    "assumptions": [
+     "units independent",
+     "under H0 each unit's effect is symmetric about 0"
+    ],
+    "analysis": "selflab.stats@1"
+   },
+   "sd_unit_effect": 1.225598
+  },
+  "H7": {
+   "n_units": 40,
+   "n_obs": 80,
+   "estimate": -0.461503,
+   "ci_low": -0.818636,
+   "ci_high": -0.12762,
+   "method": "paired_unit_mean_difference+cluster_bootstrap+sign_flip",
+   "assumptions": [
+    "pairs are matched within a unit",
+    "units independent",
+    "estimate weights each unit equally"
+   ],
+   "analysis": "selflab.stats@1",
+   "B": 2000,
+   "seed": 0,
+   "conf": 0.95,
+   "p_value": 0.99370063,
+   "test": {
+    "p_value": 0.99370063,
+    "statistic": -0.461503,
+    "n_units": 40,
+    "method": "sign_flip_monte_carlo",
+    "alternative": "greater",
+    "n_permutations": 10000,
+    "seed": 0,
+    "assumptions": [
+     "units independent",
+     "under H0 each unit's effect is symmetric about 0"
+    ],
+    "analysis": "selflab.stats@1"
+   },
+   "sd_unit_effect": 1.139575
+  },
+  "holm": {
+   "adjusted": [
+    1.0,
+    1.0
+   ],
+   "reject": [
+    false,
+    false
+   ],
+   "alpha": 0.05,
+   "method": "holm"
+  },
+  "guard_O1_minus_O0": {
+   "n_units": 40,
+   "n_obs": 80,
+   "estimate": 0.383743,
+   "ci_low": 0.290429,
+   "ci_high": 0.433757,
+   "method": "paired_unit_mean_difference+cluster_bootstrap+sign_flip",
+   "assumptions": [
+    "pairs are matched within a unit",
+    "units independent",
+    "estimate weights each unit equally"
+   ],
+   "analysis": "selflab.stats@1",
+   "B": 2000,
+   "seed": 0,
+   "conf": 0.95,
+   "p_value": 9.999e-05,
+   "test": {
+    "p_value": 9.999e-05,
+    "statistic": 0.383743,
+    "n_units": 40,
+    "method": "sign_flip_monte_carlo",
+    "alternative": "greater",
+    "n_permutations": 10000,
+    "seed": 0,
+    "assumptions": [
+     "units independent",
+     "under H0 each unit's effect is symmetric about 0"
+    ],
+    "analysis": "selflab.stats@1"
+   },
+   "sd_unit_effect": 0.276972
+  },
+  "uninformative": false,
+  "statuses": {
+   "H1": "inconclusive",
+   "H2": "inconclusive",
+   "H7": "inconclusive"
+  },
+  "observers": {
+   "access_manifests": {
+    "first_person": [
+     "problem",
+     "its own baseline answer",
+     "architecture primer (layers, heads)",
+     "intervention description",
+     "options"
+    ],
+    "third_person_named": [
+     "problem",
+     "the model's baseline answer",
+     "model name",
+     "architecture primer",
+     "intervention description",
+     "options"
+    ],
+    "transcript_only": [
+     "problem",
+     "baseline answer",
+     "intervention description",
+     "options"
+    ],
+    "O0_base_rate": [
+     "intervention type",
+     "executed outcomes of CALIBRATION problems"
+    ],
+    "O1_outsider_cells": [
+     "intervention type",
+     "carry / no-carry",
+     "executed outcomes of CALIBRATION problems"
+    ]
+   },
+   "unavailable": [
+    {
+     "id": "observer:different_model@unavailable",
+     "role": "observer",
+     "enabled": false,
+     "reason": "single-model RunContext: a second (different-model) observer cannot be loaded in-process; reported as unavailable, not substituted"
+    }
+   ]
+  },
+  "access": "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers."
+ },
+ "evidence": [
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:H1",
+   "kind": "deterministic_derivation",
+   "status": "inconclusive",
+   "title": "Self-prediction of ablation effects vs best observer O* (O1_outsider_cells)",
+   "statement": "On 80 held-out predictions (40 problems), subject log score -1.391005 bits vs O* = O1_outsider_cells -0.412587; paired difference -0.978418 [-1.375239, -0.575184], sign-flip p = 0.99990001. Decision: rule outcome 'contradicted' capped: the debug_pilot split is diagnostic only. Insensitivity guard (O1 vs O0 CI includes 0): False.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 80,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [
+    {
+     "explanation": "Generic knowledge of how transformers respond to ablations, not self-knowledge.",
+     "discriminating_test": "Third-person and transcript-only framings of the same model with matched facts (H7); a different-model observer (unavailable here).",
+     "state": "not_ruled_out",
+     "evidence_ids": []
+    },
+    {
+     "explanation": "Base rates: ablations rarely/usually change answers.",
+     "discriminating_test": "Constant base-rate observer O0 fit on calibration problems (H2).",
+     "state": "not_ruled_out",
+     "evidence_ids": []
+    },
+    {
+     "explanation": "Yes-bias or letter-position bias in the readout.",
+     "discriminating_test": "Both option orders averaged; sham interventions in the scored set are reported separately.",
+     "state": "untested",
+     "evidence_ids": []
+    }
+   ],
+   "run_ids": []
+  },
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:H2",
+   "kind": "deterministic_derivation",
+   "status": "inconclusive",
+   "title": "Subject vs constant base rate O0",
+   "statement": "Paired log-score difference -0.594674 bits [-0.965956, -0.232095], Holm-adjusted p = 1.0. Decision: gatekeeping: primary not supported; rule outcome 'contradicted' is descriptive only.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 80,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [],
+   "run_ids": []
+  },
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:H7",
+   "kind": "deterministic_derivation",
+   "status": "inconclusive",
+   "title": "First person vs third person (self-reference)",
+   "statement": "Paired log-score difference -0.461503 bits [-0.818636, -0.12762], Holm-adjusted p = 1.0. Decision: gatekeeping: primary not supported; rule outcome 'contradicted' is descriptive only.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 80,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [],
+   "run_ids": []
+  },
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:outcomes",
+   "kind": "direct_observation",
+   "status": "untested",
+   "title": "Executed intervention outcomes (descriptive)",
+   "statement": "Answer-flip (Y1) rates by intervention and problem type: target_ablation/carry 0.967 (n=30, carry mishandled 29); target_ablation/no_carry 0.000 (n=30, carry mishandled 0); control_ablation/carry 0.167 (n=30, carry mishandled 1); control_ablation/no_carry 0.133 (n=30, carry mishandled 1); sham/carry 0.000 (n=30, carry mishandled 0); sham/no_carry 0.000 (n=30, carry mishandled 0). Descriptive: no pre-registered test.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 180,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [],
+   "run_ids": []
+  },
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:predictions",
+   "kind": "model_report",
+   "status": "untested",
+   "title": "Committed predictions (letter readout) per framing",
+   "statement": "Mean predicted P(answer changes) on held-out predictions: first_person 0.049; third_person_named 0.367; transcript_only 0.028. Predictions were hashed and time-stamped before each intervention executed.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 80,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [],
+   "run_ids": []
+  },
+  {
+   "id": "csp1_pilot_1p5b_debug_s0_2026-10-17:ev:controls",
+   "kind": "direct_observation",
+   "status": "supported",
+   "title": "CSP-1 controls",
+   "statement": "Prediction passes edit-free: True (1080 passes); commitment before execution: True; intervention hooks fired: True; mean A/B letter mass 0.999815 (threshold 0.5); sham changed 0/60 answers; errors 0.",
+   "scope": {
+    "checkpoint": "Qwen/Qwen2.5-1.5B-Instruct",
+    "task_distribution": "two-digit additions without overflow (carry_items@1), E1/E2 problems excluded",
+    "intervention": "zero-ablation of heads [10, 11] / control [8, 9] in layer 22; sham",
+    "unit": "addition problem",
+    "n_units": 40,
+    "n_trials": 80,
+    "controls": [
+     "prediction committed (hash + time) before the intervention executes",
+     "prediction passes asserted edit-free (n_edits_applied == 0)",
+     "intervention hooks asserted to fire (n_edits_applied > 0)",
+     "sham intervention must leave every answer unchanged",
+     "control heads in the same layer",
+     "both option orders (yes/no position) averaged",
+     "calibration/held-out problems with disjoint operand pairs; E1/E2 problems excluded",
+     "inference clustered by problem"
+    ],
+    "tested_generalization": "none",
+    "split": "debug_pilot"
+   },
+   "limitations": [
+    "Access: every predictor predicts from a DESCRIPTION of the intervention. None reads supplied measurements (no instrument dossier in v1) and none has access to the perturbed state (prediction passes are asserted edit-free). This cannot show privileged self-access; at most computational self-knowledge relative to the listed observers.",
+    "debug_pilot split: diagnostic only; supported/contradicted outcomes are capped at inconclusive",
+    "The E1 carry mechanism is KNOWN; predicting it is a regression/calibration task, not discovery.",
+    "Different-model observer unavailable in-process (not substituted).",
+    "Two-option letter readout; mass on A/B is reported per prediction."
+   ],
+   "alternatives": [],
+   "run_ids": []
+  }
+ ],
+ "example_trials": [
+  {
+   "index": 0,
+   "condition": "target_ablation",
+   "family": "T1_add2",
+   "status": "ok",
+   "output_text": "87",
+   "ground_truth": {
+    "tool_called": false,
+    "Y1_first_token_changed": true,
+    "Y1b_answer_changed": true,
+    "baseline_correct": true,
+    "intervened_correct": false,
+    "carry_mishandled": true,
+    "carry": true,
+    "role": "calibration",
+    "hooks_fired": true
+   },
+   "parsed": {
+    "baseline_answer": "97",
+    "intervened_answer": "87"
+   },
+   "source_report": []
+  },
+  {
+   "index": 1,
+   "condition": "control_ablation",
+   "family": "T1_add2",
+   "status": "ok",
+   "output_text": "97",
+   "ground_truth": {
+    "tool_called": false,
+    "Y1_first_token_changed": false,
+    "Y1b_answer_changed": false,
+    "baseline_correct": true,
+    "intervened_correct": true,
+    "carry_mishandled": false,
+    "carry": true,
+    "role": "calibration",
+    "hooks_fired": true
+   },
+   "parsed": {
+    "baseline_answer": "97",
+    "intervened_answer": "97"
+   },
+   "source_report": []
+  },
+  {
+   "index": 2,
+   "condition": "sham",
+   "family": "T1_add2",
+   "status": "ok",
+   "output_text": "97",
+   "ground_truth": {
+    "tool_called": false,
+    "Y1_first_token_changed": false,
+    "Y1b_answer_changed": false,
+    "baseline_correct": true,
+    "intervened_correct": true,
+    "carry_mishandled": false,
+    "carry": true,
+    "role": "calibration",
+    "hooks_fired": true
+   },
+   "parsed": {
+    "baseline_answer": "97",
+    "intervened_answer": "97"
+   },
+   "source_report": []
+  }
+ ],
+ "data_location": "data/selflab/pilots/csp1_pilot_1p5b_debug_s0_2026-10-17",
+ "reanalysis_with_current_code": false,
+ "analysis_version": "csp1.analysis@1",
+ "note": "Local data (trials.jsonl, Lab runs) is not committed. Free text is limited to the examples."
+}

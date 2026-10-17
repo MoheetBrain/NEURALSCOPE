@@ -8,6 +8,7 @@ const LINKS = [
     heading: "Product",
     items: [
       { href: "/app", label: "Neural Debugger" },
+      { href: "/app/selflab", label: "SelfLab (research prototype)" },
       { href: "/#math-lab", label: "Math Lab" },
       { href: "/#roadmap", label: "Roadmap" },
     ],
@@ -37,7 +38,7 @@ export function SiteFooter() {
         <div className="max-w-sm">
           <Logo size={22} />
           <p className="mt-4 text-sm leading-relaxed text-ns-text-muted">
-            A causal debugger for neural networks. Recover the algorithms that learning discovered.
+            Inspect the model. Audit its claims. Recover the algorithms that learning discovered, and test the claims models make about their own computation.
           </p>
           <div className="mt-5 flex flex-wrap gap-1.5" aria-label="Epistemic status legend">
             {EPISTEMIC_ORDER.map((s) => (

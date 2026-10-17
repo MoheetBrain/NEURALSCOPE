@@ -5,18 +5,25 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 
 export const MARKETING_NAV = [
-  { href: "/research", label: "Research" },
-  { href: "/docs", label: "Docs" },
+  { href: "/app", label: "Debugger", hideBelow: "lg" },
+  { href: "/app/math", label: "Math Lab", hideBelow: "lg" },
+  { href: "/app/selflab", label: "SelfLab", hideBelow: "sm" },
+  { href: "/research", label: "Research", hideBelow: null },
+  { href: "/docs", label: "Docs", hideBelow: null },
 ] as const;
+
+// Static class strings so Tailwind can see them (keeps the header from overflowing on phones).
+const HIDE_BELOW = { sm: "hidden sm:block", lg: "hidden lg:block" } as const;
 
 export function NavLinks({ className }: { className?: string }) {
   const pathname = usePathname() ?? "/";
   return (
     <ul className={cn("flex items-center gap-1", className)}>
       {MARKETING_NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        // "/app" is a prefix of its sub-workspaces, so it is only active on an exact match.
+        const active = pathname === item.href || (item.href !== "/app" && pathname.startsWith(`${item.href}/`));
         return (
-          <li key={item.href}>
+          <li key={item.href} className={item.hideBelow ? HIDE_BELOW[item.hideBelow] : undefined}>
             <Link
               href={item.href}
               aria-current={active ? "page" : undefined}

@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { EpistemicLadder, LabelledViewExample } from "@/components/marketing/EpistemicLadder";
+import { FeatureStatusList } from "@/components/marketing/FeatureStatusList";
 import { HeroTrace } from "@/components/marketing/HeroTrace";
 import { MathLabMethod, MathLabPipeline, ProofFuture } from "@/components/marketing/MathLab";
 import { Pillars } from "@/components/marketing/Pillars";
@@ -7,19 +9,28 @@ import { ReticleBackdrop } from "@/components/marketing/ReticleBackdrop";
 import { PremiseDiagram } from "@/components/marketing/PremiseDiagram";
 import { Roadmap } from "@/components/marketing/Roadmap";
 import { Container, Section } from "@/components/marketing/Section";
+import { SelfLabExample, SelfLabFlow, SelfLabNotClaimed } from "@/components/marketing/SelfLabSection";
 import { ButtonLink } from "@/components/ui/Button";
 import { EpistemicBadge } from "@/components/ui/EpistemicBadge";
 import { EPISTEMIC_ORDER } from "@/lib/epistemic";
 import { parseHeroTrace } from "@/lib/hero-trace";
+import { SELFLAB_EXAMPLE } from "@/lib/selflab-example";
 import heroTraceJson from "@/public/snapshots/hero-trace.json";
 
 const heroTrace = parseHeroTrace(heroTraceJson);
+
+export const metadata: Metadata = {
+  title: { absolute: "NeuralScope — Inspect the model. Audit its claims." },
+  description:
+    "An experimental workbench for tracing AI responses, testing self-reports, and comparing explanations against measured evidence.",
+};
 
 const SPECS = [
   { k: "Model", v: "Qwen2.5-1.5B-Instruct, local" },
   { k: "Capture", v: "PyTorch forward hooks" },
   { k: "Views", v: "Token × layer · Logit Lens · attention" },
   { k: "Tests", v: "Causal ablation, rerun and measured" },
+  { k: "Claims", v: "SelfLab audits · research prototype" },
 ];
 
 export default function LandingPage() {
@@ -35,26 +46,29 @@ export default function LandingPage() {
           <div className="min-w-0">
             <p className="flex items-center gap-3">
               <span aria-hidden="true" className="h-px w-8 bg-ns-accent" />
-              <span className="ns-label text-ns-text-muted">Causal debugger for neural networks</span>
+              <span className="ns-label text-ns-text-muted">Interpretability workbench · research preview</span>
             </p>
             <h1
               id="hero-title"
               className="mt-7 text-[44px] font-medium uppercase leading-none tracking-[0.04em] text-ns-text sm:text-[60px] lg:text-[clamp(52px,4.7vw,68px)]"
             >
-              NeuralScope
+              NEURALSCOPE
             </h1>
             <p className="mt-6 text-[24px] font-light leading-tight text-ns-text sm:text-[30px]">
-              Debugger for learned intelligence.
+              Inspect the model. Audit its claims.
             </p>
-            <p className="mt-5 max-w-[44ch] text-[16px] leading-relaxed text-ns-text-muted sm:text-[17px]">
-              Inspect, intervene on, and causally test the computations neural networks learn.
+            <p className="mt-5 max-w-[46ch] text-[16px] leading-relaxed text-ns-text-muted sm:text-[17px]">
+              An experimental workbench for tracing AI responses, testing self-reports, and comparing explanations against measured evidence.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <ButtonLink href="/app" variant="primary" size="lg" caps>
                 Open Neural Debugger
                 <ArrowRight aria-hidden="true" />
               </ButtonLink>
-              <ButtonLink href="/research" variant="secondary" size="lg" caps>
+              <ButtonLink href="/app/selflab" variant="secondary" size="lg" caps>
+                Open SelfLab
+              </ButtonLink>
+              <ButtonLink href="/research" variant="ghost" size="lg" caps>
                 View Research
               </ButtonLink>
             </div>
@@ -182,10 +196,67 @@ export default function LandingPage() {
         </div>
       </Section>
 
+      {/* ============================================================= SELFLAB */}
+      <Section
+        id="selflab"
+        index="05"
+        kicker="SelfLab"
+        title={
+          <>
+            Audit what a model says about its own answer. <span className="text-ns-text-muted">Against what it measurably did.</span>
+          </>
+        }
+        lede={
+          <>
+            <p>
+              Models explain themselves: &ldquo;I used the document&rdquo;, &ldquo;I checked the arithmetic&rdquo;. SelfLab treats such a sentence as a
+              claim to test, not as evidence.
+            </p>
+            <p>
+              Select the claim in a response, commit a pre-registered experiment, rerun the target with its context changed, and compare the claim with the
+              recorded outcome. SelfLab is a research prototype; every template states its own status.
+            </p>
+          </>
+        }
+      >
+        <SelfLabFlow />
+        <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-4">
+            <p className="ns-label text-ns-text">Recorded example</p>
+            <p className="mt-4 max-w-[40ch] text-[15px] leading-relaxed text-ns-text-muted">
+              Shown only from an exported run record, with its model, hashes and scope. No illustrative numbers.
+            </p>
+          </div>
+          <div className="min-w-0 lg:col-span-8">
+            <SelfLabExample example={SELFLAB_EXAMPLE} />
+          </div>
+        </div>
+        <div className="mt-12 border-t border-ns-border pt-8">
+          <p className="ns-label mb-5 text-ns-text">What a SelfLab result does not claim</p>
+          <SelfLabNotClaimed />
+        </div>
+      </Section>
+
+      {/* ============================================================== STATUS */}
+      <Section
+        id="status"
+        index="06"
+        kicker="Status"
+        title="What runs today, and what does not"
+        lede={
+          <p>
+            Every capability carries a marking: available, research prototype, fixture, API-only view, unsupported or roadmap. The same markings appear
+            inside the workspace.
+          </p>
+        }
+      >
+        <FeatureStatusList />
+      </Section>
+
       {/* ============================================================= ROADMAP */}
       <Section
         id="roadmap"
-        index="05"
+        index="07"
         kicker="Roadmap"
         title="The roadmap"
         lede={
@@ -224,6 +295,9 @@ export default function LandingPage() {
             <ButtonLink href="/app" variant="primary" size="lg" caps>
               Launch NeuralScope
               <ArrowRight aria-hidden="true" />
+            </ButtonLink>
+            <ButtonLink href="/app/selflab" variant="secondary" size="lg" caps>
+              Open SelfLab
             </ButtonLink>
             <ButtonLink href="/docs" variant="ghost" size="lg" caps>
               Read the docs

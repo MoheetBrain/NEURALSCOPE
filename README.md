@@ -1,6 +1,10 @@
 # NeuralScope
 
-**Debugger for learned intelligence.**
+**Inspect the model. Audit its claims.**
+
+An experimental workbench for tracing AI responses, testing self-reports, and comparing explanations against
+measured evidence. The original mission stands, *recover the algorithms that learning discovered*, and SelfLab
+adds a second one: *test the claims models make about their own computation* (see [§ SelfLab](#selflab-auditing-a-models-claims-research-prototype)).
 
 NeuralScope is a universal causal debugger for artificial intelligence. It captures the internal computation of
 neural networks at token, layer, head, feature and circuit resolution. It translates those states into
@@ -186,6 +190,67 @@ observed, how a view was derived, and what an intervention changed, and by how m
 - **V3: Circuit compiler.** Attribution graphs, automated circuit discovery, causal validation, model diffing.
 - **V4: Agent + training control.** Autonomous interpretability scientist, agent flight recorder, pre-action
   Neural Interlock, training-time feedback. Future Math Lab work: formal proof state ↕ neural state (not in V1).
+
+## SelfLab: auditing a model's claims (research prototype)
+
+`/app/selflab` asks one question: **when a model describes its own behaviour or processing, does that description
+track facts that can be measured independently?**
+
+The workflow:
+1. You chat with the local target model.
+2. You select a claim in its response (e.g. "My answer was based on the provided document") and click
+   **INVESTIGATE CLAIM**.
+3. You choose a template-driven experiment. Templates only, never arbitrary code.
+4. You **commit** it. The spec, seed, hypotheses, controls and budget are sha256-hashed, together with the full
+   randomised trial plan.
+5. You **run** it on the single shared model worker. It can be cancelled and resumed without re-randomising.
+6. You read the **evidence record**:
+   - every item carries a separate *kind* (direct observation / deterministic derivation / model report /
+     interpretive hypothesis), *test status* (untested / supported / contradicted / inconclusive / control failed)
+     and *scope*;
+   - each item links to trial ids, delivery receipts and Lab runs;
+   - **OPEN IN LAB** replays a trial deterministically in the existing debugger, so its tensors can be inspected;
+   - **EXPORT EVIDENCE** writes a reproduction record and shows a privacy preview first.
+
+The result is an evidence record, not "the model's true thought". A delivery receipt proves access, not use. A
+correct answer does not prove its explanation is faithful.
+
+| Template | Status | What it tests |
+|---|---|---|
+| `source_influence_case` | research prototype | One case: removes or replaces the document (or adds a hint) and checks whether the answer, its log-likelihood and the source report follow. Scope: n = 1 case. |
+| `source_influence_battery` (Experiment A) | research prototype | Invented entities with randomly assigned facts, 6 counterfactual conditions and 4 paraphrase families (one held out). The constrained source report is read under label permutation and reversal, and scored against counterfactual source labels, a prompt-only observer and a transcript observer. Includes position-aligned patching on a subset. |
+| `csp1_carry` (Experiment B) | research prototype | Counterfactual self-prediction on the E1/E2 carry heads: the prediction is committed before the ablation runs, then scored against base-rate, outsider, third-person and transcript-only observers. |
+| `blinded_state` (Experiment C) | roadmap (protocol only) | Sham / hidden intervention / impact-matched control, with timing via the KV cache. |
+| API-only mode | disabled unless `NEURALSCOPE_SELFLAB_API_ONLY=1` | Inspects pasted transcripts and receipts only. No provider calls; no hidden activations are ever implied. |
+| LLM investigator | unsupported (not configured) | Suggestions come from deterministic rules (`rules:template-suggester@1`). |
+
+**Diagnostic pilot results** (Qwen2.5-1.5B-Instruct, CPU fp32, `debug_pilot` split, 2026-10-17). These are small
+pilots, not definitive research. Statuses on this split are capped at *inconclusive* by design. Full JSON is in
+[`docs/selflab/results/`](docs/selflab/results/); validation and falsification are in
+[`docs/selflab/VALIDATION_REPORT.md`](docs/selflab/VALIDATION_REPORT.md).
+
+- **Experiment A**: 20 items × 6 conditions, 120 trials, 0 errors.
+  - The controls passed: delivery 80/80, document followed 20/20 in both document conditions, letter mass ≈ 1.0.
+  - Source-report accuracy (letter readout) was 0.64 [0.54, 0.74]. That beats the majority-label predictor by
+    +0.14 [0.05, 0.22].
+  - It does **not** beat a prompt-only heuristic: −0.07 [−0.16, 0.01].
+  - It is far below a transcript observer: −0.36 [−0.46, −0.26].
+  - Its advantage over the majority predictor disappears when family F1 is left out.
+  - The report changed with option order in about a third of trials (consistency 0.675; pre-registered target 0.8).
+  - In 9 trials the model abstained because of a conflicting suggestion, yet reported "document" in all 9.
+  - Read: no evidence of privileged access to its own source use, and limited faithfulness.
+- **Experiment B (CSP-1)**: 180 trials, all controls passed. Predictions were committed before execution, and sham
+  interventions changed 0/60 answers.
+  - Ablating L22.H10+H11 changed 97% of carry answers. That reproduces E1's necessity result on new problems.
+  - The model predicted almost no change (mean P(change) 0.05).
+  - Its log score was worse than a simple outsider fitted on other problems' outcomes: −0.98 bits [−1.38, −0.58].
+
+Commands:
+- Tests: `make selflab-test`.
+- Pilot: `make selflab-pilot`; real-model commands run under `scripts/model_lock.py`.
+- Browser acceptance: `make selflab-smoke`.
+- Design record: [`docs/selflab/`](docs/selflab/) (interfaces, prior-art matrix, protocols, instrumentation notes,
+  commercial hypothesis).
 
 ## Repository layout
 

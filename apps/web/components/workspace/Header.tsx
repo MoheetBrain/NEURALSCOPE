@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Cpu, FlaskConical, Microscope } from "lucide-react";
+import { Cpu, FlaskConical, Microscope, ScanSearch } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { cn } from "@/lib/cn";
@@ -10,7 +10,7 @@ import { fmtParams, fmtPct, shortId, truncate } from "@/lib/format";
 import { useWorkspace } from "./WorkspaceProvider";
 import { useNow } from "./useResource";
 
-function NavTab({ href, active, children }: { href: "/app" | "/app/math"; active: boolean; children: React.ReactNode }) {
+function NavTab({ href, active, children }: { href: "/app" | "/app/math" | "/app/selflab"; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}
@@ -59,6 +59,8 @@ export function WorkspaceHeader() {
   const { health, model, healthError, pending, activeJob } = useWorkspace();
   const now = useNow(500, Boolean(pending));
   const onMath = pathname?.startsWith("/app/math") ?? false;
+  const onSelfLab = pathname?.startsWith("/app/selflab") ?? false;
+  const onDebugger = !onMath && !onSelfLab;
 
   let healthChip: React.ReactNode;
   if (healthError && !health) healthChip = <StatusChip tone="danger" dot>API unreachable</StatusChip>;
@@ -74,11 +76,14 @@ export function WorkspaceHeader() {
       </Link>
       <span className="ns-label hidden shrink-0 text-[9.5px] xl:inline">Neural Debugger</span>
       <nav aria-label="Workspace views" className="flex shrink-0 items-center gap-0.5 rounded-[var(--ns-radius)] border border-ns-border bg-ns-panel p-0.5">
-        <NavTab href="/app" active={!onMath}>
+        <NavTab href="/app" active={onDebugger}>
           <Microscope aria-hidden="true" /> Workspace
         </NavTab>
         <NavTab href="/app/math" active={onMath}>
           <FlaskConical aria-hidden="true" /> Math Lab
+        </NavTab>
+        <NavTab href="/app/selflab" active={onSelfLab}>
+          <ScanSearch aria-hidden="true" /> SelfLab
         </NavTab>
       </nav>
 
@@ -98,7 +103,7 @@ export function WorkspaceHeader() {
       ) : null}
 
       <div className="ml-auto flex min-w-0 items-center gap-2">
-        {!onMath ? <RunSelector className="hidden md:flex" /> : null}
+        {onDebugger ? <RunSelector className="hidden md:flex" /> : null}
         {pending ? (
           <StatusChip tone="accent" dot="pulse" title={pending.label}>
             {truncate(pending.label, 26)} {now > 0 ? `${Math.max(0, (now - pending.startedAt) / 1000).toFixed(1)}s` : ""}

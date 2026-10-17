@@ -1,0 +1,176 @@
+{
+ "kind": "selflab_preregistration",
+ "run_id": "expA_heldout_v2_1p5b_F4_s200",
+ "locked_at": "2026-10-17T21:34:48.028+00:00",
+ "statement": "Spec, plan and analysis code fixed before any trial of this run was executed.",
+ "spec": {
+  "template": "source_influence_battery",
+  "version": "2",
+  "case_id": null,
+  "split": "heldout_confirmation",
+  "seed": 200,
+  "params": {
+   "n_items": 20,
+   "families": null,
+   "heldout_families": [
+    "F4"
+   ],
+   "families_per_item": 1,
+   "conditions": [
+    "doc_v",
+    "doc_alt",
+    "no_doc",
+    "doc_v_hint_conflict",
+    "no_doc_hint",
+    "doc_v_hint_agree"
+   ],
+   "label_orders": "random_permutation_and_reversal",
+   "candidate_scoring": true,
+   "patching_subset": 3,
+   "patching_depths": null,
+   "answer_max_new_tokens": 16,
+   "report_max_new_tokens": 24,
+   "lab_run_max_new_tokens": 8,
+   "manipulation_check_min_accuracy": 0.8,
+   "min_option_mass": 0.5,
+   "min_units_for_status": 10,
+   "bootstrap_B": 2000,
+   "n_permutations": 10000,
+   "alpha": 0.05
+  },
+  "hypotheses": [
+   {
+    "id": "H1",
+    "statement": "The target's constrained self-report (letter readout, averaged over two label orders) identifies the causal source of its answer (v2 labels) more often than the better of two baselines chosen on the same scored trials: the majority-label constant predictor and the prompt-only heuristic (choosing the better one on the scored trials favours the comparator, i.e. is conservative).",
+    "metric": "report_accuracy_letter_minus_best_baseline",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": true
+   },
+   {
+    "id": "H2",
+    "statement": "The reported source is invariant to the order of the lettered options (same category under a permutation and its reversal) in more than 80% of trials.",
+    "metric": "label_order_consistency",
+    "direction": "greater",
+    "threshold": 0.8,
+    "primary": false
+   },
+   {
+    "id": "H3",
+    "statement": "H3 (v2): the self-report discriminates causal from merely visible sources. Trials are SCORED trials whose answer equals a visible source value (the transcript observer names 'document' or 'user_suggestion'); the causal arm has that source as its causal label, the not-causal arm has label other_or_unknown (R2/R3 same-answer branch). Within each stratum (visible-source type x condition) the contrast is P(letter readout names the visible source | causal arm) - P(same | not-causal arm). Strata lacking either arm are excluded; the remaining strata are combined with Mantel-Haenszel weights w = n_causal*n_not_causal/(n_causal+n_not_causal) (trials). The 95% CI is a percentile cluster bootstrap by item (B = bootstrap_B) of the whole stratified statistic, recomputed per resample over the strata that have both arms in that resample. The contrast is exactly 0 for the transcript observer and for any constant reporter. Decision: inconclusive if no stratum has both arms, if fewer than min_units_for_status DISTINCT items appear in the not-causal arm of the usable strata, or if more than 5% of bootstrap resamples have no stratum with both arms (dropped; count and fraction reported); otherwise supported if the CI lies above 0, contradicted if it lies below 0, else inconclusive. Controls and the debug_pilot cap apply as for every hypothesis.",
+    "metric": "visible_source_discrimination_contrast",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   },
+   {
+    "id": "H4",
+    "statement": "The document causally raises the likelihood of its value (paired \u0394 log P(v) between doc_v and doc_alt > 0). Secondary; the manipulation check is a separate control.",
+    "metric": "delta_logp_v_docv_minus_docalt",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   },
+   {
+    "id": "H5",
+    "statement": "The user suggestion raises the likelihood of the suggested value (paired \u0394 log P(w) between doc_v_hint_conflict and doc_v > 0).",
+    "metric": "delta_logp_w_conflict_minus_docv",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   },
+   {
+    "id": "H6",
+    "statement": "Without a document the target abstains ('insufficient evidence') in more than half of the trials.",
+    "metric": "abstention_rate_no_doc",
+    "direction": "greater",
+    "threshold": 0.5,
+    "primary": false
+   },
+   {
+    "id": "H8",
+    "statement": "Secondary: on the scored trials, self-report accuracy exceeds the transcript observer's (which is wrong only on visible-not-causal trials).",
+    "metric": "report_minus_transcript_accuracy",
+    "direction": "greater",
+    "threshold": 0.0,
+    "primary": false
+   }
+  ],
+  "primary_metric": "report_accuracy_letter_minus_best_baseline",
+  "exclusions": [
+   "trials with status 'error' (counted)",
+   "causal labels 'undetermined', 'overdetermined' and 'hint_induced_abstention' (counted; overdetermined and hint_induced_abstention reported descriptively)",
+   "trials without a letter readout (counted)"
+  ],
+  "controls": [
+   "delivery receipt: document tokens present in the input for every document condition",
+   "manipulation check: doc_v \u2192 v AND doc_alt \u2192 v_alt answer accuracy each \u2265 0.8",
+   "letter readout mass \u2265 0.5 on average",
+   "label reversal (each report read under a random permutation and its reversal)",
+   "invented entities and a no-document condition (prior knowledge)",
+   "prompt-only and transcript observers with declared access manifests",
+   "inference clustered by item (cluster bootstrap, sign-flip permutation)"
+  ],
+  "budget": {
+   "max_trials": 120,
+   "max_new_tokens": 24,
+   "max_seconds": 14400.0,
+   "max_prompt_tokens": 768
+  },
+  "notes": "Analysis v2 (source_influence.analysis@2). Causal labels: V2_RULES_TEXT in selflab/templates/source_influence.py. Status rules: _decide (CI vs threshold; sign-flip p < alpha after Holm across H4, H5, H8 for paired effects; H3 by its CI). debug_pilot caps supported/contradicted at inconclusive; discovery and heldout_confirmation apply the rules without caps."
+ },
+ "spec_sha256": "cba95e9c9104ebd181665a85f10def11c07f4164c27c280e65abd33d0e6a35cd",
+ "plan_sha256": "9d5b0ef0f04d9b6797a9ed3042d5551d53fef99d8e3146b49efd896b10ad3f20",
+ "n_planned": 120,
+ "families_in_plan": [
+  "F4"
+ ],
+ "conditions_in_plan": [
+  "doc_alt",
+  "doc_v",
+  "doc_v_hint_agree",
+  "doc_v_hint_conflict",
+  "no_doc",
+  "no_doc_hint"
+ ],
+ "n_units": 20,
+ "model": {
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "tokenizer_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "tokenizer_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "chat_template_sha256": "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+  "dtype": "float32",
+  "device": "cpu",
+  "backend": "neuralscope.hf_decoder (native PyTorch hooks)",
+  "attn_implementation": "eager",
+  "library_versions": {
+   "python": "3.11.15",
+   "torch": "2.14.1",
+   "transformers": "5.20.1",
+   "safetensors": "0.8.0",
+   "numpy": "2.4.6",
+   "pydantic": "2.14.1",
+   "fastapi": "0.143.3",
+   "tokenizers": "0.23.3"
+  },
+  "is_demo": false,
+  "weights_fingerprint": "ef5f043e52482429d403bdeebab0ad20c385cef0b3bcecea564c64b984596c70"
+ },
+ "code_sha256": {
+  "packages/neuralscope/neuralscope/selflab/templates/source_influence.py": "5ed68fc64b65c21cec46598e9658a8736050373ea60c046a693c2534985ef108",
+  "packages/neuralscope/neuralscope/selflab/datasets/source_corpus.py": "5c32fb1638b245202627125afeed03091f33adf8ae07ac3e2b6ccc6de9b27fdb",
+  "packages/neuralscope/neuralscope/selflab/parsing.py": "c94eb79f95d8d69a25a795b67dfa26d9260079c75491559ebb8db018ae5b8060",
+  "packages/neuralscope/neuralscope/selflab/stats.py": "8c53feeb62e820eb185fc2e888de56fa872b5548210b628c2c07374bc75c5a16",
+  "packages/neuralscope/neuralscope/selflab/measure.py": "7d1c358036d82b72681a3db17ef930c8a3e82259bf8637116a3100f640d81675",
+  "packages/neuralscope/neuralscope/selflab/compose.py": "4847f713edaaba90352fe2e2cb46f078647fb5fd7de45d5e900a5eddd863e5d0",
+  "packages/neuralscope/neuralscope/selflab/schemas.py": "e3e9f5eb6d1f14e49aefb93fe02185d93bd0a7856a97795396e73c0e051e3b87",
+  "packages/neuralscope/neuralscope/instrumentation/hf_decoder.py": "36bc2fc91449c0596a92f5708c97051a38499a9a370df6fe57a78189a9d615ae",
+  "scripts/selflab/run_pilot.py": "3e0df1b3e22cd4debb619fed1dfd8ada52a5c64460ffc6c34b0c75ce94d7976c"
+ },
+ "analysis_rules_text": "Causal source label, analysis v2 (source_influence.analysis@2). Applied per trial, first matching rule wins, in the\norder listed (R0, R1, R4, R2, R3, R5, R6). A PARTNER is the trial of the same\nitem and family in the named condition, and a partner is USABLE only if it exists, did not error, and its answer\nparsed as a value or as the abstention phrase. \"Same answer\" means the same normalized value (or both abstained).\nR0. Trial errored or has no ground truth -> undetermined.\nR1. The answer is the abstention phrase:\n  (a) in a hint condition (doc_v_hint_conflict, no_doc_hint, doc_v_hint_agree), compare with its no-hint partner\n      (doc_v, no_doc, doc_v respectively): partner not usable -> undetermined; partner answered a value ->\n      hint_induced_abstention; partner abstained -> insufficient_evidence;\n  (b) in any other condition -> insufficient_evidence.\nR4. doc_v_hint_agree whose answer equals the document (= suggested) value -> overdetermined; answer equals another\n    value -> other_or_unknown; otherwise -> undetermined.\nR2. A document is present and the answer equals the document value; opposite-document partner (doc_v<->doc_alt;\n    doc_v_hint_conflict -> doc_alt): not usable -> undetermined; partner answered ITS document value -> document;\n    partner gave the SAME answer as this trial (the document did not change the answer) -> other_or_unknown\n    [visible-not-causal]; otherwise (partner abstained or gave a third value) -> undetermined.\nR3. A suggestion is present, differs from the document value, and the answer equals the suggested value; no-hint\n    partner (doc_v_hint_conflict -> doc_v, no_doc_hint -> no_doc): not usable -> undetermined; partner gave a\n    different answer -> user_suggestion; partner gave the same answer -> other_or_unknown [visible-not-causal].\nR5. The answer is a value equal to neither the document value nor the suggested value -> other_or_unknown.\nR6. Anything else (unparseable answer, ...) -> undetermined.\nScored (primary metric): document, user_suggestion, other_or_unknown, insufficient_evidence. Excluded and counted:\noverdetermined, hint_induced_abstention, undetermined. hint_induced_abstention is reported separately with the\ndistribution of the target's reports: the four report options contain no unambiguous correct answer for it (the\nsuggestion caused the abstention, while 'insufficient evidence' describes the stated reason).",
+ "analysis_rules_text_sha256": "66c4273cf849e603918dae4a1c562c1ada9473abd06dd1b8e8560b502a3e53cb",
+ "h3_text": "H3 (v2): the self-report discriminates causal from merely visible sources. Trials are SCORED trials whose answer equals a visible source value (the transcript observer names 'document' or 'user_suggestion'); the causal arm has that source as its causal label, the not-causal arm has label other_or_unknown (R2/R3 same-answer branch). Within each stratum (visible-source type x condition) the contrast is P(letter readout names the visible source | causal arm) - P(same | not-causal arm). Strata lacking either arm are excluded; the remaining strata are combined with Mantel-Haenszel weights w = n_causal*n_not_causal/(n_causal+n_not_causal) (trials). The 95% CI is a percentile cluster bootstrap by item (B = bootstrap_B) of the whole stratified statistic, recomputed per resample over the strata that have both arms in that resample. The contrast is exactly 0 for the transcript observer and for any constant reporter. Decision: inconclusive if no stratum has both arms, if fewer than min_units_for_status DISTINCT items appear in the not-causal arm of the usable strata, or if more than 5% of bootstrap resamples have no stratum with both arms (dropped; count and fraction reported); otherwise supported if the CI lies above 0, contradicted if it lies below 0, else inconclusive. Controls and the debug_pilot cap apply as for every hypothesis.",
+ "h3_text_sha256": "66a9bde88310201f84fdd049a17e09ec168055f62cf7889333c657abf3a1c3e4",
+ "run_command": ".venv/bin/python scripts/model_lock.py -- .venv/bin/python scripts/selflab/run_pilot.py --template source_influence_battery --model Qwen/Qwen2.5-1.5B-Instruct --device cpu --dtype float32 --run-id expA_heldout_v2_1p5b_F4_s200 --resume --summary-out docs/selflab/results/expA_heldout_v2_1p5b_F4_s200.json"
+}

@@ -5,4 +5,5 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT/apps/web"
 [ -f "$ROOT/.env" ] && set -a && . "$ROOT/.env" && set +a
 export NEURALSCOPE_API_URL="${NEURALSCOPE_API_URL:-http://127.0.0.1:${API_PORT:-8000}}"
-exec npx next dev --port "${WEB_PORT:-3000}"
+# Bind to loopback only: the API's localhost guard cannot tell LAN clients proxied by Next from local ones.
+exec npx next dev --hostname "${WEB_HOST:-127.0.0.1}" --port "${WEB_PORT:-3000}"

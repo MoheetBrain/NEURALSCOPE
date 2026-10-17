@@ -115,6 +115,15 @@ class GenerationResult:
     prompt_ids: list[int]
     generated_ids: list[int]
     stopped_by: Literal["eos", "max_new_tokens"]
+    # Hook hit count: number of (edit, batch row, forward call) applications that actually fired, i.e. calls in
+    # which the edit's absolute positions intersected the positions processed by that call. None = not tracked.
+    n_edits_applied: int | None = None
+    # log P(generated_ids[i] | prompt, generated_ids[:i]) read off the KV-cached decode logits (natural log, float32
+    # log-softmax over the full vocabulary). None = not tracked.
+    generated_logprobs: list[float] | None = None
+    # top-1 minus top-2 logit at each greedy step (decision margin). A tiny margin (e.g. < 1e-3) marks a near-tie
+    # whose argmax can flip across devices/kernels; see docs/selflab/INSTRUMENTATION_NOTES.md. None = not tracked.
+    generated_margins: list[float] | None = None
 
 
 @dataclass
@@ -154,16 +163,66 @@ class TokenizedPrompt:
     user_span: tuple[int, int] | None  # [start, end) token span of the user's own text, if locatable
 
 
+@dataclass
+class TokenizedChat:
+    """A chat (list of ``{"role", "content"}`` messages) rendered with the model's chat template and tokenised.
+
+    ``message_token_spans[i]`` is the [start, end) token span of message i's CONTENT (template tokens excluded),
+    or None when the content is empty or could not be located verbatim in the templated text. Spans contain every
+    token that overlaps the content's characters; ``span_exact[i]`` says whether the first/last token boundaries
+    coincide exactly with the content's first/last character (False means a token straddles the boundary).
+    """
+
+    text: str  # exact templated string that was tokenised
+    input_ids: list[int]
+    message_token_spans: list[tuple[int, int] | None]
+    message_char_spans: list[tuple[int, int] | None] = field(default_factory=list)  # [start,end) chars in ``text``
+    offsets: list[tuple[int, int]] = field(default_factory=list)  # per-token [start,end) chars in ``text``
+    span_exact: list[bool | None] = field(default_factory=list)
+    add_generation_prompt: bool = True
+
+    def char_span_to_tokens(self, message_index: int, char_start: int, char_end: int) -> tuple[int, int] | None:
+        """Map a [char_start, char_end) span INSIDE message ``message_index``'s content to a [start, end) token span.
+
+        Returns the smallest token span covering every token that overlaps the character span, or None when the
+        character span is empty or the message content was not located. Raises ValueError for spans outside the
+        message content.
+        """
+        if not 0 <= message_index < len(self.message_token_spans):
+            raise ValueError(f"message_index {message_index} out of range (0..{len(self.message_token_spans) - 1})")
+        cs = self.message_char_spans[message_index] if message_index < len(self.message_char_spans) else None
+        if cs is None:
+            return None
+        n = cs[1] - cs[0]
+        if not 0 <= char_start <= char_end <= n:
+            raise ValueError(f"char span [{char_start}, {char_end}) outside message content of length {n}")
+        if char_start == char_end:
+            return None
+        a, b = cs[0] + char_start, cs[0] + char_end
+        idx = [i for i, (s, e) in enumerate(self.offsets) if e > a and s < b and e > s]
+        return (idx[0], idx[-1] + 1) if idx else None
+
+
 class ModelAdapter(ABC):
     """Abstract instrumentation adapter."""
 
     info: ModelInfo
+    # Hook statistics of the most recent instrumented call (set by concrete adapters; read under the adapter lock):
+    # {"n_edits_applied", "n_forward_calls", "n_rows", "n_edits"}.
+    last_session_stats: dict | None = None
 
     @abstractmethod
     def load(self) -> None: ...
 
     @abstractmethod
     def tokenize(self, prompt: str, chat: bool = True, system_prompt: str | None = None) -> TokenizedPrompt: ...
+
+    def tokenize_messages(self, messages: list[dict], add_generation_prompt: bool = True) -> TokenizedChat:
+        """Render ``messages`` with the chat template, tokenise, and locate each message's content tokens.
+
+        For a single user message (no system message) the ids equal ``tokenize(content).input_ids``.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not implement tokenize_messages")
 
     @abstractmethod
     def encode(self, text: str) -> list[int]:
@@ -186,10 +245,24 @@ class ModelAdapter(ABC):
 
     @abstractmethod
     def final_logits_batch(self, input_ids: list[int], edit_sets: list[list[Edit]], start_depth: int = 0,
-                           resid_in: torch.Tensor | None = None) -> torch.Tensor:
+                           resid_in: torch.Tensor | None = None,
+                           logit_positions: list[int] | None = None) -> torch.Tensor:
         """Run B copies of the same sequence, copy b under edit_sets[b]. Returns logits [B, T, V].
 
-        start_depth > 0 resumes from a cached residual state ``resid_in`` [T, d] (sweep acceleration)."""
+        start_depth > 0 resumes from a cached residual state ``resid_in`` [T, d] (sweep acceleration).
+        ``logit_positions`` (optional) unembeds only those positions → [B, len(logit_positions), V]."""
+
+    def sequence_logits(self, sequences: list[list[int]], positions: list[list[int]],
+                        edits: list[Edit] | None = None) -> list[torch.Tensor]:
+        """Teacher-forced logits of several DIFFERENT sequences, each under the same ``edits`` (absolute positions).
+
+        Returns one float32 CPU tensor [len(positions[b]), V] per sequence: the logits at the requested positions.
+        Generic fallback: one ``final_logits_batch`` call per sequence. Concrete adapters may batch.
+        """
+        if len(sequences) != len(positions):
+            raise ValueError("sequences and positions must have the same length")
+        return [self.final_logits_batch(list(seq), [list(edits or [])], logit_positions=list(pos))[0]
+                for seq, pos in zip(sequences, positions)]
 
     @abstractmethod
     def logit_lens(self, resid: torch.Tensor) -> torch.Tensor:

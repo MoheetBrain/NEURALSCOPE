@@ -30,8 +30,14 @@ from safetensors.torch import load_file, save_file
 
 RUN_JSON_FIELDS = {
     "generation", "input_ids", "user_span", "generated_ids", "free_generated_ids", "target", "tensor_meta",
-    "interventions", "metrics", "math", "tags",
+    "interventions", "metrics", "math", "tags", "messages",
 }
+
+# Columns added after the first schema. Each is applied with ``ALTER TABLE runs ADD COLUMN`` when missing, so older
+# databases keep working (existing rows read the new column as NULL).
+RUN_MIGRATIONS: list[tuple[str, str]] = [
+    ("messages", "TEXT"),  # JSON list of {"role", "content"} chat messages (SelfLab multi-message runs)
+]
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -64,7 +70,8 @@ CREATE TABLE IF NOT EXISTS runs (
     notes TEXT,
     tags TEXT,
     benchmark_id TEXT,
-    trace_consistent INTEGER
+    trace_consistent INTEGER,
+    messages TEXT
 );
 CREATE INDEX IF NOT EXISTS runs_created ON runs(created_at);
 CREATE INDEX IF NOT EXISTS runs_parent ON runs(parent_run_id);
@@ -114,8 +121,23 @@ class ExperimentStore:
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
         self._conn.commit()
+        self._migrate()
         self._cache: OrderedDict[str, dict[str, torch.Tensor]] = OrderedDict()
         self._cache_size = tensor_cache_size
+
+    def _migrate(self) -> None:
+        """Backwards-compatible additive migrations (idempotent; safe if another process migrated first)."""
+        with self._lock:
+            have = {r["name"] for r in self._conn.execute("PRAGMA table_info(runs)").fetchall()}
+            for col, typ in RUN_MIGRATIONS:
+                if col in have:
+                    continue
+                try:
+                    self._conn.execute(f"ALTER TABLE runs ADD COLUMN {col} {typ}")
+                except sqlite3.OperationalError as e:  # concurrent migration by another connection
+                    if "duplicate column" not in str(e).lower():
+                        raise
+            self._conn.commit()
 
     # ------------------------------------------------------------------ runs
     def save_run(self, record: dict[str, Any], tensors: dict[str, torch.Tensor] | None) -> dict[str, Any]:

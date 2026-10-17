@@ -20,6 +20,11 @@ data/experiments/*
 data/activations/*
 !data/experiments/.gitkeep
 !data/activations/.gitkeep
+# SelfLab local data (trial stores, pilots, reproductions) and the model lock
+data/selflab/
+data/repro/
+data/demo/
+data/.model.lock
 
 # Env
 .env
